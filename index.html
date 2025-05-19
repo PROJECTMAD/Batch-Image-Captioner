@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.0a">
+    <meta name="app-version" content="1.0.0b">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Image Captioner</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -232,7 +232,7 @@
         overflow-y: auto;
         flex-shrink: 0; /* Prevent shrinking in flex context */
         box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Softer shadow */
-        margin: 32.5px auto;
+        margin: 31.5px auto;
 
         /* For persistent state (controlled by adding this class via JS) */
         /* When persistent, it's not an overlay, so needs to be part of flex flow */
@@ -939,40 +939,38 @@
             // --- Sidenav Layout & Control ---
             function updateSidenavLayout() {
                 if (window.innerWidth >= 993 && isSidenavPersistent) {
-                    sidenavElem.classList.add('sidenav-persistent');
+                    // sidenavElem.classList.remove('sidenav-persistent');
                     if (sidenavInstance.isOpen) sidenavInstance.close(); // Close Materialize overlay if switching to persistent
                 } else {
-                    sidenavElem.classList.remove('sidenav-persistent');
+                    sidenavElem.classList.add('sidenav-persistent');
                     // Materialize Sidenav instance will handle opening/closing as an overlay
                 }
             }
 
-            sidenavTrigger.addEventListener('click', (e) => {
-                e.preventDefault();
-                if (window.innerWidth >= 993) {
-                    isSidenavPersistent = !isSidenavPersistent;
-                    localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
-                    updateSidenavLayout();
-                } else {
-                    sidenavInstance.isOpen ? sidenavInstance.close() : sidenavInstance.open();
-                }
-            });
+            // sidenavTrigger.addEventListener('click', (e) => {
+            //     e.preventDefault();
+            //     if (window.innerWidth >= 993) {
+            //         isSidenavPersistent = !isSidenavPersistent;
+            //         localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
+            //         updateSidenavLayout();
+            //     } else {
+            //         sidenavInstance.isOpen ? sidenavInstance.close() : sidenavInstance.open();
+            //     }
+            // });
 
-            window.addEventListener('resize', () => {
-                const largeScreen = window.innerWidth >= 993;
-                if (!largeScreen && isSidenavPersistent) { // If it was persistent and screen shrinks
-                    isSidenavPersistent = false; // It can't be CSS persistent on small screens
-                    localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent); // Persist this change
-                } else if (largeScreen && localStorage.getItem(SIDENAV_PERSISTENT_KEY) !== null) {
-                    // If resizing to large screen, restore user's preference for persistency
-                    isSidenavPersistent = localStorage.getItem(SIDENAV_PERSISTENT_KEY) === 'true';
-                } else if (largeScreen && localStorage.getItem(SIDENAV_PERSISTENT_KEY) === null) {
-                    // Default to persistent on large screens if no preference saved yet
-                    isSidenavPersistent = true;
-                    localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
-                }
-                updateSidenavLayout();
-            });
+            // window.addEventListener('resize', () => {
+            //     const largeScreen = window.innerWidth >= 993;
+            //     if (!largeScreen && isSidenavPersistent) {
+            //         isSidenavPersistent = false;
+            //         localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
+            //     } else if (largeScreen && localStorage.getItem(SIDENAV_PERSISTENT_KEY) !== null) {
+            //         isSidenavPersistent = localStorage.getItem(SIDENAV_PERSISTENT_KEY) === 'true';
+            //     } else if (largeScreen && localStorage.getItem(SIDENAV_PERSISTENT_KEY) === null) {
+            //         isSidenavPersistent = true;
+            //         localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
+            //     }
+            //     updateSidenavLayout();
+            // });
             
             updateSidenavLayout(); // Initial call
 
