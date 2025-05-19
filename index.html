@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="app-version" content="1.0.0a">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Batch Image Captioner</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+<style>
+    :root {
+        /* --- Light Theme (Default) --- */
+        /* Primary Palette (Teal-ish) */
+        --primary-color: #26a69a;       /* Teal */
+        --primary-color-light: #64d8cb;  /* Teal Lighten-2 (approx) */
+        --primary-color-dark: #00796b;   /* Teal Darken-2 */
+        --accent-color: #26a69a;         /* Accent color - can be same as primary */
+        --link-color: var(--primary-color-dark);
+
+        /* Backgrounds & Text */
+        --body-bg: #f4f5f7;              /* Light grayish blue - softer than pure white */
+        --text-color: #212121;           /* Dark Grey for text */
+        --muted-text-color: #757575;     /* Medium Grey for muted text, placeholders */
+        --border-color: #e0e0e0;         /* Light Grey for borders */
+
+        /* Component Backgrounds */
+        --card-bg: #ffffff;
+        --sidenav-bg: #eceff1;           /* Blue Grey Lighten-5 */
+        --input-bg: #ffffff;             /* Inputs on white background */
+        --tabs-bg: var(--card-bg);       /* Tabs usually on card background */
+        --console-bg: #fafafa;           /* Slightly off-white for console */
+        
+        /* Component Text & Borders */
+        --card-title-color: var(--text-color);
+        --card-border-color: var(--border-color);
+        --sidenav-text-color: #37474f;   /* Blue Grey Darken-2 */
+        --sidenav-border-color: #cfd8dc; /* Blue Grey Lighten-3 */
+        --input-border-color: #9e9e9e;   /* Grey for input borders */
+        --input-text-color: #424242;     /* Grey Darken-3 for input text */
+        --input-label-color: var(--muted-text-color);
+        --input-label-active-color: var(--accent-color);
+        --console-border: var(--border-color);
+
+        /* Buttons */
+        --btn-bg: var(--primary-color);
+        --btn-text-color: #ffffff;
+        --btn-hover-bg: var(--primary-color-light);
+        --btn-disabled-bg: #DFDFDF;      /* Light grey for disabled */
+        --btn-disabled-text: #9F9F9F;    /* Darker grey text for disabled */
+
+        /* Console Messages */
+        --console-info-bg: #e3f2fd; --console-info-text: #0d47a1;
+        --console-success-bg: #e8f5e9; --console-success-text: #1b5e20;
+        --console-warning-bg: #fff3e0; --console-warning-text: #e65100;
+        --console-error-bg: #ffebee; --console-error-text: #b71c1c;
+
+        /* Queue Item Specifics */
+        --queue-item-output-bg: #455a64; /* Darker for output box */
+        --queue-item-output-text: #cfd8dc;
+        --queue-item-thumbnail-border: #b0bec5;
+        --queue-item-title-color: #263238;
+        --queue-item-status-color: #546e7a;
+
+        /* Tabs Specifics */
+        --tabs-indicator-color: var(--accent-color);
+        --tabs-link-active-color: var(--accent-color);
+        --tabs-link-color: rgba(38, 166, 154, 0.7); /* Primary color, semi-transparent */
+
+        /* Sizes (remain consistent) */
+        --body-width: 1280px;
+        --navbar-height: 64px;
+        --sidenav-width: 650px; /* Default width for persistent sidenav */
+        /* --main-width: 655px; Not strictly needed if main is flex-grow */
+        /* --container-height: 765px; Not used directly, height is calc(100vh - navbar) */
+    }
+
+    body.dark-theme {
+        /* --- Dark Theme --- */
+        /* Primary Palette (Cool Blue) */
+        --primary-color: #2196F3;       /* Materialize Blue */
+        --primary-color-light: #64B5F6;  /* Materialize Blue Lighten-2 */
+        --primary-color-dark: #1976D2;   /* Materialize Blue Darken-2 */
+        --accent-color: var(--primary-color-light); /* Use lighter blue for accents */
+        --link-color: var(--accent-color);
+
+        /* Backgrounds & Text */
+        --body-bg: #121212;              /* Very dark grey / true black */
+        --text-color: #e0e0e0;           /* Light grey for primary text */
+        --muted-text-color: #8e8e93;     /* Medium grey for muted text */
+        --border-color: #38383a;         /* Subtle dark border */
+
+        /* Component Backgrounds */
+        --card-bg: #1e1e1e;              /* Dark grey for cards */
+        --sidenav-bg: #171717;           /* Slightly different dark for sidenav */
+        --input-bg: #2c2c2e;             /* Dark input background */
+        --tabs-bg: var(--card-bg);
+        --console-bg: var(--input-bg);   /* Console matching input bg */
+
+        /* Component Text & Borders */
+        --card-title-color: var(--text-color);
+        --card-border-color: var(--border-color);
+        --sidenav-text-color: var(--text-color);
+        --sidenav-border-color: var(--border-color);
+        --input-border-color: #545458;
+        --input-text-color: var(--text-color);
+        --input-label-color: var(--muted-text-color);
+        --input-label-active-color: var(--accent-color);
+        --console-border: var(--border-color);
+
+        /* Buttons */
+        --btn-bg: var(--primary-color);
+        --btn-text-color: #ffffff;
+        --btn-hover-bg: var(--primary-color-light);
+        --btn-disabled-bg: #3a3a3c;
+        --btn-disabled-text: #757575;
+
+        /* Console Messages */
+        --console-info-bg: #1a237e; --console-info-text: #c5cae9;    /* Indigo dark */
+        --console-success-bg: #1b5e20; --console-success-text: #c8e6c9; /* Green dark */
+        --console-warning-bg: #e65100; --console-warning-text: #ffe0b2; /* Orange dark */
+        --console-error-bg: #b71c1c; --console-error-text: #ffcdd2;     /* Red dark */
+
+        /* Queue Item Specifics */
+        --queue-item-output-bg: #2c2c2e; /* Matching input bg */
+        --queue-item-output-text: #c7c7cc;
+        --queue-item-thumbnail-border: var(--border-color);
+        --queue-item-title-color: var(--text-color);
+        --queue-item-status-color: var(--muted-text-color);
+
+        /* Tabs Specifics */
+        --tabs-indicator-color: var(--accent-color);
+        --tabs-link-active-color: var(--accent-color);
+        --tabs-link-color: var(--muted-text-color); /* Inactive tabs in dark mode */
+    }
+
+    /* --- Global Styles --- */
+    html {
+        display: flex;
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    }
+    *, *:before, *:after {
+        box-sizing: inherit;
+    }
+
+    body {
+        background-color: var(--body-bg);
+        color: var(--text-color);
+        padding-top: var(--navbar-height);
+        display: inherit;
+        margin: 0 auto;
+        max-width: var(--body-width);
+        overflow: hidden;
+        max-height: 100vh;
+    }
+
+    /* --- Blur Overlay --- */
+    #pageBlurOverlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 1002; /* Below Materialize modal overlay */
+        display: none; /* Controlled by JS */
+        background-color: rgba(0,0,0,0.1); /* Optional: slight dim */
+    }
+    #pageBlurOverlay.active {
+        display: block;
+    }
+
+    /* --- Navbar --- */
+    nav {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; /* Full viewport width */
+        height: var(--navbar-height);
+        z-index: 1000;
+        background-color: var(--primary-color) !important; /* For Materialize override */
+        color: var(--btn-text-color);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    body.dark-theme nav { /* Dark theme navbar style */
+        background-color: var(--card-bg) !important;
+        border-bottom: 1px solid var(--border-color);
+        box-shadow: none;
+    }
+    nav .nav-wrapper {
+        position: relative !important; /* Override Materialize for better control if needed */
+        display: flex !important;
+        align-items: center;
+        height: 100%;
+        padding: 0 1rem; /* Standard padding */
+    }
+    nav .brand-logo {
+        position: absolute; /* For true centering */
+        left: 50%;
+        transform: translateX(-50%);
+        color: var(--btn-text-color);
+        font-size: 1.5rem;
+    }
+    body.dark-theme nav .brand-logo { color: var(--text-color); }
+    nav .sidenav-trigger {
+        color: var(--btn-text-color);
+        margin-right: 10px; /* Space it from edge */
+    }
+    body.dark-theme nav .sidenav-trigger i,
+    body.dark-theme nav ul.right a i {
+        color: var(--accent-color); /* Icons use accent color in dark theme */
+    }
+    body.dark-theme nav ul.right a {
+         color: var(--text-color); /* Ensure link text (if any) is also visible */
+    }
+    nav ul.right { /* For theme/settings icons */
+        display: flex;
+        align-items: center;
+    }
+    nav ul.right li a { padding: 0 12px; }
+
+
+    /* --- Sidenav --- */
+    #imageQueueSidenav {
+        /* position: relative; No, Materialize needs fixed/absolute for overlay */
+        width: var(--sidenav-width); /* Default width, JS might hide it or Materialize handles overlay */
+        min-height: 528px;
+        height: max-content;
+        max-height: calc(100% - var(--navbar-height));
+        background-color: var(--sidenav-bg);
+        color: var(--sidenav-text-color);
+        z-index: 999; /* Standard Materialize sidenav z-index for overlay */
+        border-right: 1px solid var(--sidenav-border-color);
+        overflow-y: auto;
+        flex-shrink: 0; /* Prevent shrinking in flex context */
+        box-shadow: 2px 0 5px rgba(0,0,0,0.05); /* Softer shadow */
+        margin: 32.5px auto;
+
+        /* For persistent state (controlled by adding this class via JS) */
+        /* When persistent, it's not an overlay, so needs to be part of flex flow */
+    }
+    #imageQueueSidenav.sidenav-persistent {
+        position: relative; /* Take it out of overlay flow */
+        transform: translateX(0) !important; /* Ensure it's visible */
+        z-index: 1; /* Lower z-index than main content if overlap occurs, but should be side-by-side */
+    }
+    /* Default Materialize sidenav is display:none and transformed until opened */
+
+
+    /* --- Main Content Area --- */
+    main {
+        flex-grow: 1; /* Takes up remaining space */
+        width: 100%;  /* Important for flex calculation if sidenav width varies */
+        height: calc(100vh - var(--navbar-height));
+        overflow-y: auto; /* Allows main content to scroll */
+        background-color: var(--body-bg);
+        padding: 0; /* Padding is on the inner container */
+        /* NO margin-left manipulation */
+    }
+    #mainContentContainer {
+        max-width: 700px; /* Max width for the content block */
+        margin: 0 auto;   /* Centering the content block */
+        padding: 24px 20px; /* Consistent padding */
+    }
+
+    /* --- Materialize Component Theming & Overrides --- */
+    /* Cards */
+    .card {
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border: 1px solid var(--card-border-color);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        border-radius: 6px; /* Standardized border radius */
+        margin-bottom: 20px; /* Consistent spacing */
+    }
+    .card .card-content { padding: 20px; }
+    .card .card-title {
+        color: var(--card-title-color);
+        font-size: 1.4rem;
+        font-weight: 500;
+        margin-bottom: 15px;
+    }
+
+    /* Tabs */
+    .tabs {
+        background-color: var(--tabs-bg);
+        border-bottom: 1px solid var(--card-border-color); /* Match card border */
+    }
+    .tabs .tab a {
+        color: var(--tabs-link-color);
+        text-transform: none; /* Cleaner look */
+        font-weight: 500;
+    }
+    .tabs .tab a:hover { color: var(--tabs-link-active-color); }
+    .tabs .tab a.active { color: var(--tabs-link-active-color) !important; }
+    .tabs .indicator { background-color: var(--tabs-indicator-color); }
+    body.dark-theme .tabs { border-bottom-color: var(--border-color); }
+
+    /* Input Fields (general styling for Materialize) */
+    .input-field label { color: var(--input-label-color); }
+    .input-field input[type=text]:not(.browser-default),
+    .input-field input[type=url]:not(.browser-default),
+    .input-field input[type=password]:not(.browser-default),
+    .input-field textarea:not(.browser-default) {
+        background-color: transparent; /* Let card/page bg show through */
+        border-bottom: 1px solid var(--input-border-color);
+        border-radius: 0; /* Materialize default */
+        color: var(--input-text-color);
+        padding: 0.5rem 0; /* Adjust padding for better vertical alignment */
+    }
+    .input-field input[type=text]:not(.browser-default):focus:not([readonly]),
+    .input-field input[type=url]:not(.browser-default):focus:not([readonly]),
+    .input-field input[type=password]:not(.browser-default):focus:not([readonly]),
+    .input-field textarea:not(.browser-default):focus:not([readonly]) {
+        border-bottom: 1px solid var(--accent-color);
+        box-shadow: 0 1px 0 0 var(--accent-color);
+    }
+    .input-field label.active { color: var(--accent-color); }
+    .file-field .file-path.validate {
+        color: var(--input-text-color);
+        border-bottom: 1px solid var(--input-border-color);
+    }
+    .file-field .file-path-wrapper { padding-left: 10px; }
+    .file-field .btn, .file-field .btn:hover {
+        background-color: var(--btn-bg);
+        color: var(--btn-text-color);
+    }
+    body.dark-theme .file-field .btn, 
+    body.dark-theme .file-field .btn:hover { background-color: var(--btn-bg); }
+
+
+    /* Radio Buttons */
+    [type="radio"]:not(:checked)+span:before,
+    [type="radio"]:not(:checked)+span:after {
+        border: 2px solid var(--input-border-color); /* Match input border for consistency */
+    }
+    [type="radio"]:checked+span:after,
+    [type="radio"].with-gap:checked+span:before,
+    [type="radio"].with-gap:checked+span:after {
+        border: 2px solid var(--accent-color);
+    }
+    [type="radio"]:checked+span:after { background-color: var(--accent-color); }
+    form p label span { color: var(--text-color); } /* Label text color */
+
+    /* Buttons */
+    .btn, .btn-floating, .btn-large {
+        background-color: #78909c;
+        color: var(--btn-text-color);
+        text-transform: none; /* Cleaner buttons */
+        font-weight: 500;
+        border-radius: 4px; /* Slightly less rounded */
+    }
+    .btn:hover, .btn-floating:hover, .btn-large:hover { background-color: var(--btn-hover-bg); }
+    .btn.red, .btn-floating.red { background-color: #f44336 !important; } /* Materialize red */
+    .btn.red:hover, .btn-floating.red:hover { background-color: #e53935 !important; }
+    body.dark-theme .btn.red, body.dark-theme .btn-floating.red { background-color: #ef5350 !important; } /* Lighter red for dark */
+    body.dark-theme .btn.red:hover, body.dark-theme .btn-floating.red:hover { background-color: #e57373 !important; }
+    .btn:disabled i, .btn-large:disabled i { /* Ensure icon color also changes */
+        color: var(--btn-disabled-text) !important;
+    }
+    .btn:disabled, .btn-large:disabled, .btn-floating:disabled {
+        background-color: var(--btn-disabled-bg) !important;
+        color: var(--btn-disabled-text) !important;
+        cursor: not-allowed;
+        box-shadow: none !important;
+    }
+    body.dark-theme .btn:disabled, body.dark-theme .btn-large:disabled, body.dark-theme .btn-floating:disabled {
+        background-color: var(--btn-disabled-bg) !important;
+        color: var(--btn-disabled-text) !important;
+        cursor: not-allowed;
+        box-shadow: none !important;
+    }
+
+    /* Paste Area */
+    #pasteArea {
+        border: 2px dashed var(--muted-text-color); padding: 20px; text-align: center;
+        cursor: pointer; min-height: 100px; display: flex;
+        align-items: center; justify-content: center; margin-top: 10px;
+        background-color: var(--input-bg); /* Use input background or a distinct one */
+        border-radius: 4px;
+    }
+    body.dark-theme #pasteArea { background-color: rgba(0,0,0,0.1); /* Slightly transparent on dark */ }
+
+
+    /* Loader */
+    .loader-container { display: none; text-align: center; margin-top: 20px; }
+    .loader-container.active { display: flex; align-items:center; justify-content:center; flex-direction:column; }
+    .material-icons.spin { animation: spin 1.5s linear infinite; line-height: inherit; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    /* --- Sidenav Queue Item Styling --- */
+    #imageQueueSidenav .subheader {
+        font-weight: 500; padding: 0 16px; line-height:48px;
+        color: var(--sidenav-text-color);
+        border-bottom: 1px solid var(--sidenav-border-color);
+    }
+    #imageQueueSidenav .divider { margin: 0; background-color: var(--sidenav-border-color); } /* Thinner divider */
+    #emptyQueueMessageSidenav { padding: 16px; color: var(--muted-text-color); text-align: center; }
+
+    .queue-item {
+        display: flex; align-items: center; padding: 12px 16px;
+        border-bottom: 1px solid var(--sidenav-border-color);
+    }
+    .queue-item:last-child { border-bottom: none; }
+    .queue-item-thumbnail {
+        width: 100px; height: auto; aspect-ratio: 832 / 1216; /* Maintain aspect ratio */
+        object-fit: cover; margin-right: 12px;
+        border-radius: 4px; border: 1px solid var(--queue-item-thumbnail-border);
+        flex-shrink: 0;
+    }
+    .queue-item-details { flex-grow: 1; min-width: 0; /* For text overflow */ }
+    .queue-item-title {
+        font-weight: 500; display: block; margin-bottom: 4px;
+        color: var(--queue-item-title-color);
+        white-space: nowrap; overflow: hidden; text-overflow: ellipsis; /* Prevent long names breaking layout */
+    }
+    .queue-item-status {
+        font-style: italic; color: var(--queue-item-status-color);
+        margin-bottom: 4px; font-size: 0.85em;; font-weight: bold;
+    }
+    .queue-item-status.processing { color: var(--accent-color); } /* Use accent for processing */
+    .queue-item-status.completed { color: var(--btn-bg); }
+    .queue-item-status.error { color: var(--error-color); }
+    .queue-item-output {
+        background-color: var(--queue-item-output-bg);
+        color: var(--queue-item-output-text);
+        padding: 8px 10px; border-radius: 4px;
+        overflow-x: auto; white-space: pre-wrap; word-wrap: break-word;
+        font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace; /* Better mono stack */
+        font-size: 0.8em; max-height: 90px; margin-top: 5px;
+        border: 1px solid var(--border-color); /* Subtle border for output box */
+    }
+    .queue-item-actions {
+        display: flex;
+        margin-right: 8px;
+        position: absolute;
+        margin-bottom: 85px;
+        right: 5px;
+    }
+    .queue-item-actions .btn-floating {
+        margin-bottom: 5px;
+        width: 32px; height: 32px; line-height: 32px;
+    }
+    .queue-item-actions .btn-floating i { font-size: 1.2rem; line-height: 32px; }
+    .queue-item-actions .btn-floating:last-child { margin-bottom: 0; }
+    .btn-floating.copied { background-color: var(--btn-bg) !important; }
+    .btn-floating.copied .material-icons { color: var(--btn-text-color) !important; }
+    /* body.dark-theme .btn-floating.copied { background-color: var(--console-success-color) !important; }
+    body.dark-theme .btn-floating.copied .material-icons { color: white !important; } */
+
+    /* --- Console Log Area --- */
+    #consoleLog { margin-top: 20px; } /* Already a card, inherits card styles */
+    #consoleMessages { 
+        max-height: 180px; /* Slightly taller */
+        overflow-y: auto; 
+        font-size: 0.85em; 
+        background-color: var(--console-bg); 
+        padding: 10px;
+        border-radius: 4px; /* Inner radius */
+        border: 1px solid var(--console-border);
+    }
+    #consoleMessages p { margin: 2px 0; padding: 4px 6px; border-radius: 3px; line-height: 1.4; }
+    #consoleMessages p .timestamp { font-size: 0.85em; color: var(--muted-text-color); margin-right: 6px;}
+    #consoleMessages p .duration { font-style: italic; color: var(--primary-color-dark); margin-left: 6px; }
+    body.dark-theme #consoleMessages p .duration { color: var(--primary-color-light); }
+
+    #consoleMessages p.console-info { background-color: var(--console-info-bg); color: var(--console-info-text);}
+    #consoleMessages p.console-success { background-color: var(--console-success-bg); color: var(--console-success-text);}
+    #consoleMessages p.console-warning { background-color: var(--console-warning-bg); color: var(--console-warning-text);}
+    #consoleMessages p.console-error { background-color: var(--console-error-bg); color: var(--console-error-text);}
+
+    /* --- Settings Modal --- */
+    /* Materialize modal z-index adjustments if needed, handled by !important if necessary */
+    .modal {
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border-radius: 6px;
+        max-width: 500px; /* Constrain modal width */
+    }
+    .modal .modal-content { padding: 24px; }
+    .modal .modal-footer {
+        background-color: var(--card-bg);
+        border-top: 1px solid var(--card-border-color);
+        padding: 8px 24px; /* Adjust padding */
+    }
+    .modal .modal-footer .btn-flat {
+        color: var(--accent-color);
+        font-weight: 500;
+    }
+    body.dark-theme .modal { border: 1px solid var(--border-color); }
+    body.dark-theme .modal .modal-footer { border-top-color: var(--border-color); }
+    
+    /* Materialize Tooltip Theming */
+    .material-tooltip .tooltip-content {
+        background-color: #323232; /* Standard dark tooltip */
+        color: #fff;
+        font-size: 0.9rem;
+        padding: 6px 10px;
+    }
+    body.dark-theme .material-tooltip .tooltip-content {
+        background-color: #424242; /* Darker for dark theme if needed, or use same */
+        color: #e0e0e0;
+    }
+
+</style>
+</head>
+<body>
+    <div id="pageBlurOverlay"></div>
+
+    <header>
+        <nav> <!-- Color from CSS var -->
+            <div class="nav-wrapper">
+                <a href="#" data-target="imageQueueSidenav" class="sidenav-trigger"><i class="material-icons">menu</i></a>
+                <a href="#" class="brand-logo center"></a>
+                <ul class="right">
+                    <li><a href="#!" id="themeToggle" title="Toggle Theme"><i class="material-icons">brightness_4</i></a></li>
+                    <li><a href="#settingsModal" class="modal-trigger" title="Settings"><i class="material-icons">settings</i></a></li>
+                </ul>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <div id="mainContentContainer">
+            <!-- Input Controls Cards -->
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">1. Load Image(s)</span>
+                     <div class="row" style="margin-bottom: 0;"> <!-- Remove default row margin -->
+                        <div class="col s12">
+                            <ul class="tabs">
+                                <li class="tab col s4"><a class="active" href="#uploadTab">Upload</a></li>
+                                <li class="tab col s4"><a href="#urlTab">From URL</a></li>
+                                <li class="tab col s4"><a href="#pasteTab">Paste</a></li>
+                            </ul>
+                        </div>
+                        <div id="uploadTab" class="col s12" style="padding-top: 20px;">
+                            <div class="file-field input-field">
+                                <div class="btn"><span>Files</span><input type="file" id="imageUpload" accept="image/*" multiple></div>
+                                <div class="file-path-wrapper"><input class="file-path validate" type="text" placeholder="Upload one or more images"></div>
+                            </div>
+                        </div>
+                        <div id="urlTab" class="col s12" style="padding-top: 20px;">
+                            <div class="input-field">
+                                <input id="imageUrlInput" type="text" class="validate"><label for="imageUrlInput">Image URL (CORS Permitting)</label>
+                            </div>
+                            <button class="btn waves-effect waves-light" id="addImageFromUrlButton" style="width:100%;">Add from URL</button>
+                            <p class="caption grey-text" style="font-size:0.8rem; margin-top:5px;">Note: Loading from URL may fail due to CORS.</p>
+                        </div>
+                        <div id="pasteTab" class="col s12" style="padding-top: 20px;">
+                            <div id="pasteArea" contenteditable="false">Click or Paste Image Here</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-content">
+                    <span class="card-title">2. Choose Prompt</span>
+                    <form id="promptForm">
+                        <p><label><input name="promptType" type="radio" value="sd" checked /><span>Stable Diffusion Prompt</span></label></p>
+                        <p><label><input name="promptType" type="radio" value="danbooru" /><span>Danbooru Tags</span></label></p>
+                    </form>
+                </div>
+            </div>
+
+            <button class="btn waves-effect waves-light btn-large" id="processQueueButton" style="width:100%; margin-top:10px;" disabled>
+                Process Queue <i class="material-icons right">playlist_play</i>
+            </button>
+            <button class="btn waves-effect waves-light red" id="clearQueueButton" style="width:100%; margin-top:10px;" disabled>
+                Clear Queue <i class="material-icons right">clear_all</i>
+            </button>
+
+            <!-- Console Log Area -->
+            <div id="consoleLog" class="card" style="display: none;"> <!-- Initially hidden -->
+                <div class="card-content" style="padding-bottom: 10px;">
+                    <span class="card-title" style="font-size: 1.2rem; margin-bottom: 10px;">Console</span>
+                    <div id="consoleMessages">
+                        <!-- Messages will be prepended here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <ul id="imageQueueSidenav" class="sidenav"> <!-- Materialize 'sidenav' class for JS control -->
+        <li><div class="subheader">Image Queue (<span id="queueCountSidenav">0</span>)</div></li>
+        <li><div class="divider"></div></li>
+        <div id="imageQueueAreaSidenav">
+            <p id="emptyQueueMessageSidenav">Load images to see them here.</p>
+        </div>
+    </ul>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal">
+        <div class="modal-content">
+            <h4 id="settingsModalTitle">API Settings</h4>
+            <p id="settingsModalSubtitle">Configure the API endpoint and optional API Key.</p>
+            <div class="input-field">
+                <input id="apiEndpointInput" type="url" value="http://localhost:6969/v1/chat/completions">
+                <label for="apiEndpointInput">API Endpoint URL</label>
+            </div>
+            <div class="input-field">
+                <input id="apiKeyInput" type="password">
+                <label for="apiKeyInput">API Key (Optional - Bearer Token)</label>
+            </div>
+            <p id="apiConnectionStatus" class="caption" style="min-height: 1.2em; margin-top:10px; font-weight: 500;"></p>
+        </div>
+        <div class="modal-footer">
+            <button class="waves-effect waves-green btn-flat" id="saveApiSettingsButton">Save & Test</button>
+            <button class="waves-effect waves-blue btn-flat" id="testApiSettingsButton">Test Connection</button>
+            <button class="modal-close waves-effect waves-grey btn-flat" id="closeApiSettingsButton" style="display:none;">Close</button>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        const APP_TITLE = document.querySelector('title').textContent;
+        const APP_VERSION = document.querySelector('meta[name="app-version"]').getAttribute('content');
+        document.querySelector('nav .brand-logo.center').textContent = `${APP_TITLE} v${APP_VERSION}`;
+
+        const API_ENDPOINT_KEY = 'batchCaptionApiEndpoint';
+        const API_KEY_KEY = 'batchCaptionApiKey';
+        const THEME_KEY = 'batchCaptionTheme';
+        const SIDENAV_PERSISTENT_KEY = 'batchCaptionSidenavPersistent';
+
+
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize Materialize Components
+            M.Tabs.init(document.querySelector('.tabs'));
+            M.Tooltip.init(document.querySelectorAll('.tooltipped')); // Initialize any static tooltips
+
+            const sidenavElem = document.getElementById('imageQueueSidenav');
+            const sidenavInstance = M.Sidenav.init(sidenavElem); // Initialize Materialize Sidenav
+            const sidenavTrigger = document.querySelector('.sidenav-trigger');
+            const pageBlurOverlay = document.getElementById('pageBlurOverlay');
+            
+            let isSidenavPersistent = localStorage.getItem(SIDENAV_PERSISTENT_KEY) === 'true';
+            if (window.innerWidth < 993) { // Override for small screens
+                isSidenavPersistent = false;
+            }
+
+
+            // --- API Settings Modal ---
+            const settingsModalElement = document.getElementById('settingsModal');
+            const settingsModalInstance = M.Modal.init(settingsModalElement, {
+                // onOpenEnd: () => { if (pageBlurOverlay.classList.contains('active')) apiEndpointInput.focus(); } // Removed to simplify
+            });
+            const apiEndpointInput = document.getElementById('apiEndpointInput');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const saveApiSettingsButton = document.getElementById('saveApiSettingsButton');
+            const testApiSettingsButton = document.getElementById('testApiSettingsButton');
+            const closeApiSettingsButton = document.getElementById('closeApiSettingsButton');
+            const apiConnectionStatus = document.getElementById('apiConnectionStatus');
+            const settingsModalTitle = document.getElementById('settingsModalTitle');
+            const settingsModalSubtitle = document.getElementById('settingsModalSubtitle');
+            
+            let currentApiEndpoint = localStorage.getItem(API_ENDPOINT_KEY) || 'http://localhost:6969/v1/chat/completions';
+            let currentApiKey = localStorage.getItem(API_KEY_KEY) || null;
+
+
+            // --- Theme Switcher ---
+            const themeToggle = document.getElementById('themeToggle');
+            const themeIcon = themeToggle.querySelector('i');
+
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-theme');
+                    themeIcon.textContent = 'brightness_7'; 
+                } else {
+                    document.body.classList.remove('dark-theme');
+                    themeIcon.textContent = 'brightness_4';
+                }
+                 // Re-initialize tooltips if their appearance changes with theme
+                M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+            }
+
+            themeToggle.addEventListener('click', () => {
+                const isDark = document.body.classList.contains('dark-theme');
+                const newTheme = isDark ? 'light' : 'dark';
+                localStorage.setItem(THEME_KEY, newTheme);
+                applyTheme(newTheme);
+            });
+            applyTheme(localStorage.getItem(THEME_KEY) || 'light'); // Default to light
+
+
+            // --- Core App Variables (Queue, Processing State) ---
+            const imageUploadInput = document.getElementById('imageUpload');
+            const imageUrlInput = document.getElementById('imageUrlInput');
+            const addImageFromUrlButton = document.getElementById('addImageFromUrlButton');
+            const pasteArea = document.getElementById('pasteArea');
+            const promptForm = document.getElementById('promptForm');
+            const processQueueButton = document.getElementById('processQueueButton');
+            const clearQueueButton = document.getElementById('clearQueueButton');
+            
+            const imageQueueAreaSidenav = document.getElementById('imageQueueAreaSidenav');
+            const emptyQueueMessageSidenav = document.getElementById('emptyQueueMessageSidenav');
+            const queueCountSidenavSpan = document.querySelector('#imageQueueSidenav .subheader span');
+
+            const consoleLogDiv = document.getElementById('consoleLog');
+            const consoleMessagesDiv = document.getElementById('consoleMessages');
+            const MAX_CONSOLE_MESSAGES = 50;
+
+            let imageQueue = [];
+            let isProcessing = false;
+
+            const NAME_PART_ADJECTIVES = ["Absurd", "Ancient", "Angry", "Awesome", "Awkward", "Bad", "Bald", "Big", "Bitter", "Blazing", "Blessed", "Blind", "Blue", "Bold", "Brave", "Brief", "Bright", "Broken", "Bumpy", "Calm", "Captain", "Charming", "Cheap", "Cheeky", "Clean", "Clumsy", "Cold", "Cool", "Cosmic", "Crazy", "Creepy", "Cruel", "Crying", "Cunning", "Curious", "Dapper", "Dark", "Deadly", "Deep", "Defiant", "Depressed", "Digital", "Dizzy", "Doctor", "Double", "Dramatic", "Dreamy", "Drunk", "Dusty", "Eager", "Early", "Easy", "Elder", "Electric", "Empty", "Evil", "Fake", "Fancy", "Fast", "Fat", "Final", "Flying", "Focused", "Forgotten", "Foxy", "Freezing", "Fresh", "Friendly", "Frozen", "Furious", "Fuzzy", "Gentle", "Ghost", "Giant", "Giga", "Gloomy", "Golden", "Good", "Grand", "Greedy", "Grim", "Grumpy", "Hairy", "Happy", "Haunted", "Heavy", "Hidden", "High", "Holy", "Honest", "Humble", "Hungry", "Hyper", "Icy", "Ideal", "Imperial", "Inner", "Iron", "Jolly", "Joyful", "Jumping", "Junior", "Keen", "Kind", "King", "Lazy", "Light", "Little", "Lone", "Long", "Lost", "Loud", "Lovely", "Lucky", "Mad", "Magic", "Major", "Mega", "Metal", "Mighty", "Mini", "Misty", "Modern", "Mutant", "Mystic", "Naked", "Nasty", "Naughty", "Nerdy", "New", "Noble", "Noisy", "Nuclear", "Odd", "Old", "Omega", "Only", "Orange", "Ordinary", "Outer", "Perfect", "Plain", "Plastic", "Polite", "Poor", "Powerful", "Pretty", "Prickly", "Prime", "Private", "Professor", "Proud", "Psycho", "Punchy", "Pure", "Purple", "Quick", "Quiet", "Rad", "Random", "Rapid", "Rebel", "Red", "Rich", "Risky", "Rock", "Rough", "Royal", "Rude", "Rusty", "Sad", "Salty", "Savage", "Scared", "Secret", "Serious", "Shadow", "Sharp", "Shiny", "Short", "Shy", "Silent", "Silly", "Silver", "Simple", "Sir", "Sleepy", "Slow", "Small", "Smart", "Smooth", "Sneaky", "Solid", "Sour", "Sparkly", "Special", "Spicy", "Spooky", "Steel", "Storm", "Strange", "Street", "Strong", "Stupid", "Super", "Sweet", "Swift", "Tall", "Ten", "Thin", "Thirsty", "Thunder", "Tiny", "Tired", "Top", "Total", "Tough", "Toxic", "True", "Twin", "Ultra", "Unholy", "Vain", "Vast", "Violent", "Void", "Wacky", "Warm", "Weak", "Weird", "Wet", "White", "Wicked", "Wide", "Wild", "Wise", "Wooden", "Young", "Yummy", "Zany", "Zombie", "Plump", "Leprechaun", "Depression", "Hooray"];
+            const NAME_PART_NOUNS = ["Aardvark", "Abyss", "Agent", "Alien", "Alpaca", "Anarchy", "Angel", "Ant", "Anthem", "Anvil", "Apex", "Apple", "Archive", "Arena", "Armor", "Arrow", "Art", "Ash", "Attack", "Atom", "Aura", "Aurora", "Autumn", "Axe", "Bacon", "Badge", "Badger", "Baguette", "Banshee", "Baron", "Basilisk", "Bastion", "Bat", "Beacon", "Beard", "Beast", "Beauty", "Bed", "Bee", "Beer", "Beetle", "Bell", "Biscuit", "Blade", "Blast", "Blaze", "Blimp", "Bliss", "Blizzard", "Blob", "Block", "Blood", "Boar", "Boat", "Bomb", "Bone", "Bongo", "Book", "Boom", "Boot", "Boss", "Bottle", "Boulder", "Brain", "Branch", "Bread", "Breath", "Brick", "Bride", "Bridge", "Broccoli", "Bubble", "Bucket", "Buffalo", "Bug", "Bullet", "Bumble", "Bunker", "Burger", "Butter", "Button", "Cactus", "Cake", "Camel", "Candle", "Candy", "Cannon", "Canyon", "Cape", "Car", "Carpet", "Carrot", "Cash", "Castle", "Cat", "Cave", "Cell", "Centaur", "Chain", "Chair", "Chaos", "Charm", "Cheese", "Cherry", "Chicken", "Chief", "Child", "Chimera", "Chip", "Choir", "Chorus", "Cigar", "Cipher", "Circus", "Citizen", "Clam", "Claw", "Clay", "Clock", "Cloud", "Clown", "Cobra", "Code", "Coffee", "Coin", "Comet", "Cookie", "Copper", "Core", "Cosmos", "Couch", "Cow", "Coyote", "Crab", "Craft", "Crane", "Crash", "Crawler", "Cream", "Cricket", "Crime", "Crisis", "Crook", "Crow", "Crown", "Crux", "Crystal", "Cube", "Cult", "Cup", "Curse", "Cyborg", "Cyclone", "Czar", "Daemon", "Dagger", "Dance", "Dawn", "Day", "Death", "Decay", "Deer", "Demon", "Desert", "Design", "Desire", "Destiny", "Devil", "Dew", "Diamond", "Dice", "Digger", "Dilemma", "Dinosaur", "Disco", "Disease", "Disk", "Djinn", "Dock", "Dog", "Doll", "Dolphin", "Donkey", "Donut", "Doom", "Door", "Dragon", "Drake", "Dream", "Drill", "Drink", "Drone", "Drop", "Drug", "Drum", "Duck", "Duke", "Dune", "Dungeon", "Dust", "Dynamo", "Eagle", "Earth", "Echo", "Eclipse", "Eel", "Egg", "Ego", "Elf", "Elixir", "Ember", "Emblem", "Emperor", "Empire", "Engine", "Enigma", "Entity", "Epoch", "Error", "Essence", "Evening", "Event", "Exile", "Eye", "Fabric", "Face", "Fairy", "Falcon", "Fall", "Famine", "Fang", "Fantasy", "Farm", "Fate", "Father", "Fault", "Fear", "Feast", "Feather", "Fever", "Field", "Fiend", "Fig", "Fight", "Figure", "File", "Finger", "Fire", "Fish", "Fist", "Flag", "Flame", "Flask", "Flea", "Flesh", "Flint", "Flood", "Floor", "Flower", "Flute", "Flux", "Fly", "Foam", "Fog", "Folk", "Food", "Fool", "Foot", "Force", "Forest", "Forge", "Fork", "Form", "Fort", "Fossil", "Fox", "Fragment", "Frenzy", "Friend", "Frog", "Frost", "Fruit", "Fungus", "Fury", "Gadget", "Galaxy", "Gambit", "Game", "Gang", "Garden", "Garlic", "Gas", "Gate", "Gauntlet", "Gear", "Gecko", "Gem", "Genesis", "Genie", "Genius", "Ghost", "Ghoul", "Giant", "Gift", "Glacier", "Glade", "Glass", "Glaze", "Glitch", "Globe", "Gloom", "Glove", "Glow", "Glue", "Gnome", "Goat", "Goblin", "God", "Gold", "Golem", "Goose", "Gorge", "Gospel", "Grain", "Grape", "Grass", "Grave", "Greed", "Griffin", "Grimoire", "Grog", "Groom", "Grove", "Guard", "Guest", "Guide", "Guilt", "Guitar", "Gun", "Guru", "Gut", "Gym", "Gypsy", "Hacker", "Hail", "Hair", "Ham", "Hammer", "Hand", "Harbor", "Harmony", "Harp", "Harpy", "Hat", "Hate", "Hawk", "Haze", "Head", "Health", "Heart", "Heat", "Heaven", "Hedge", "Hell", "Helmet", "Herb", "Hermit", "Hero", "Hex", "Hive", "Hog", "Hole", "Holiday", "Home", "Honey", "Hood", "Hoof", "Hook", "Hope", "Horn", "Hornet", "Horror", "Horse", "Host", "Hound", "House", "Hulk", "Humor", "Hunt", "Hurricane", "Husk", "Hydra", "Hymn", "Ice", "Icon", "Idea", "Idol", "Illusion", "Image", "Impact", "Impulse", "Incense", "Inferno", "Ink", "Inn", "Insect", "Iron", "Island", "Issue", "Ivory", "Jackal", "Jacket", "Jade", "Jail", "Jam", "Jester", "Jet", "Jewel", "Joke", "Journey", "Joy", "Judge", "Juice", "Jungle", "Junk", "Jury", "Justice", "Karma", "Key", "Kid", "Kiln", "King", "Kiss", "Kitchen", "Kite", "Kitten", "Knife", "Knight", "Knot", "Kraken", "Label", "Labor", "Labyrinth", "Lace", "Ladder", "Lady", "Lagoon", "Lake", "Lamb", "Lament", "Lamp", "Lance", "Land", "Lantern", "Lark", "Larva", "Laser", "Lasso", "Lava", "Law", "Lead", "Leaf", "Leak", "Leech", "Legacy", "Legend", "Lemon", "Lens", "Leopard", "Leprechaun", "Lettuce", "Leviathan", "Liberty", "Librarian", "Library", "Lice", "Lich", "Lie", "Life", "Light", "Lightning", "Lily", "Lime", "Line", "Link", "Lion", "Lips", "Liquid", "Lizard", "Llama", "Loaf", "Loan", "Lobster", "Lock", "Locket", "Locust", "Log", "Logic", "Loom", "Loop", "Lord", "Lore", "Lotus", "Lounge", "Love", "Luck", "Lullaby", "Lumber", "Lump", "Lunch", "Lure", "Lust", "Lute", "Luxury", "Lyre", "Macaroni", "Machine", "Mage", "Magic", "Magma", "Magnet", "Maiden", "Mail", "Mammoth", "Man", "Mane", "Mantra", "Map", "Maple", "Marble", "March", "Mare", "Mark", "Market", "Mask", "Mass", "Master", "Match", "Matrix", "Matron", "Maze", "Meadow", "Meal", "Meat", "Medal", "Melody", "Melon", "Member", "Memory", "Menace", "Mentor", "Mercy", "Meridian", "Mesh", "Message", "Metal", "Meteor", "Microbe", "Milk", "Mill", "Mimic", "Mind", "Mine", "Mirage", "Mirror", "Mischief", "Missile", "Mist", "Mob", "Model", "Moloch", "Moment", "Monarch", "Money", "Monk", "Monkey", "Monster", "Moon", "Moose", "Morning", "Moss", "Moth", "Motion", "Motor", "Mountain", "Mouse", "Mouth", "Mud", "Muffin", "Mule", "Mummy", "Murder", "Muscle", "Museum", "Mushroom", "Music", "Musket", "Mutant", "Mutt", "Mystery", "Myth", "Nail", "Name", "Nation", "Nature", "Navy", "Nebula", "Neck", "Needle", "Nemesis", "Net", "Network", "Night", "Nimbus", "Ninja", "Nitro", "Noble", "Node", "Noise", "Nomad", "Noon", "Noodle", "North", "Nose", "Note", "Nothing", "Nova", "Novel", "Nuke", "Null", "Number", "Nut", "Nymph", "Oasis", "Oath", "Oatmeal", "Object", "Oblivion", "Obsidian", "Ocean", "Ochre", "Octagon", "Octopus", "Odor", "Odyssey", "Office", "Ogre", "Oil", "Ointment", "Omega", "Omen", "Onion", "Ooze", "Opal", "Opera", "Oracle", "Orb", "Orchard", "Orchestra", "Orc", "Order", "Organ", "Origin", "Ornament", "Orphan", "Ostrich", "Otter", "Outlet", "Outlaw", "Oven", "Overlord", "Owl", "Ox", "Oyster", "Package", "Pact", "Paddle", "Page", "Pain", "Paint", "Palace", "Palm", "Pancake", "Panda", "Panic", "Panther", "Pants", "Paper", "Parade", "Paradox", "Parasite", "Parchement", "Park", "Parrot", "Party", "Pasta", "Patch", "Path", "Patron", "Pawn", "Peace", "Peach", "Peacock", "Peanut", "Pear", "Pearl", "Peasant", "Pebble", "Pegasus", "Pelican", "Pen", "Pencil", "Pendant", "Pendulum", "Penguin", "Pepper", "Petal", "Phantom", "Phoenix", "Phone", "Photo", "Phrase", "Piano", "Pickle", "Pie", "Piece", "Pig", "Pigeon", "Pike", "Pilgrim", "Pill", "Pillar", "Pillow", "Pilot", "Pin", "Pine", "Pipe", "Pirate", "Piston", "Pit", "Pitch", "Pixel", "Pizza", "Plague", "Plain", "Plan", "Plane", "Planet", "Plank", "Plant", "Plasma", "Plate", "Platypus", "Player", "Plaza", "Plot", "Plume", "Pocket", "Poem", "Poet", "Point", "Poison", "Poker", "Pole", "Pollen", "Pond", "Pony", "Pool", "Popcorn", "Portal", "Portrait", "Post", "Potato", "Potion", "Powder", "Power", "Prayer", "Prey", "Price", "Pride", "Priest", "Prince", "Prism", "Prison", "Probe", "Problem", "Prodigy", "Program", "Project", "Prophet", "Proton", "Prowler", "Proxy", "Psalm", "Psyche", "Pudding", "Puddle", "Pulse", "Punch", "Punk", "Puppet", "Puppy", "Purge", "Pyramid", "Python", "Quake", "Quark", "Quarry", "Queen", "Quest", "Quill", "Rabbit", "Race", "Radish", "Rage", "Raider", "Rail", "Rain", "Rake", "Ram", "Rancor", "Ranger", "Rat", "Raven", "Ray", "Razor", "Realm", "Reaper", "Rebel", "Recipe", "Record", "Recruit", "Redeem", "Reef", "Reflex", "Refuge", "Relic", "Remedy", "Rent", "Reptile", "Requiem", "Reserve", "Resin", "Resort", "Rest", "Retreat", "Return", "Revelation", "Revenge", "Rhyme", "Rhythm", "Ribbon", "Rice", "Riddle", "Rider", "Rifle", "Rift", "Ring", "Riot", "Risk", "Rite", "Ritual", "River", "Road", "Roar", "Robe", "Robin", "Robot", "Rock", "Rocket", "Rod", "Rogue", "Roll", "Romance", "Roof", "Rook", "Room", "Root", "Rope", "Rose", "Rotor", "Round", "Route", "Ruby", "Ruin", "Ruler", "Rune", "Rust", "Saber", "Sack", "Sacrifice", "Sage", "Sail", "Salad", "Salamander", "Salt", "Salute", "Salvo", "Sanctum", "Sand", "Sarcasm", "Sauce", "Sausage", "Savage", "Savior", "Saw", "Scale", "Scarab", "Scarecrow", "Scarf", "Scent", "Scheme", "Scholar", "School", "Science", "Scimitar", "Scissors", "Scoop", "Scorpion", "Scout", "Scrap", "Scream", "Screen", "Screw", "Script", "Scroll", "Scythe", "Sea", "Seal", "Seam", "Search", "Season", "Seat", "Secret", "Sect", "Sector", "Seed", "Seer", "Seizure", "Senate", "Sense", "Sentinel", "Sentry", "Seraph", "Serenade", "Serpent", "Servant", "Server", "Shadow", "Shaft", "Shale", "Shaman", "Shame", "Shard", "Shark", "Shears", "Shed", "Sheep", "Shell", "Shelter", "Sheriff", "Shield", "Shift", "Shine", "Ship", "Shire", "Shock", "Shoe", "Shop", "Shore", "Shot", "Shovel", "Show", "Shred", "Shriek", "Shrine", "Shroud", "Sign", "Signal", "Silence", "Silk", "Silver", "Sin", "Singer", "Sire", "Siren", "Skeleton", "Skin", "Skull", "Sky", "Slab", "Slang", "Slave", "Sled", "Sleep", "Sleet", "Sleeve", "Slime", "Sling", "Slot", "Sloth", "Sludge", "Slug", "Smile", "Smoke", "Snake", "Snare", "Snow", "Soap", "Socket", "Soil", "Soldier", "Solitude", "Song", "Soot", "Sorcery", "Sorrow", "Soul", "Sound", "Soup", "South", "Space", "Spade", "Spam", "Spark", "Sparrow", "Spawn", "Spear", "Spell", "Sphere", "Spice", "Spider", "Spike", "Spin", "Spine", "Spiral", "Spire", "Spirit", "Spit", "Spite", "Spore", "Sport", "Spot", "Spring", "Sprite", "Spur", "Spy", "Squad", "Square", "Squash", "Squid", "Squirrel", "Staff", "Stage", "Stain", "Stair", "Stake", "Stall", "Stamp", "Stance", "Star", "Statue", "Steam", "Steel", "Stem", "Step", "Stew", "Stick", "Stigma", "Sting", "Stone", "Storm", "Story", "Stove", "Strain", "Strand", "Strap", "Stream", "Street", "Stress", "Strike", "String", "Strip", "Stroke", "Struggle", "Stub", "Student", "Study", "Stump", "Style", "Sugar", "Suit", "Sulfur", "Summer", "Sun", "Surge", "Swamp", "Swan", "Swarm", "Sweat", "Sweet", "Swift", "Swim", "Switch", "Sword", "Symbol", "Symphony", "Syndicate", "Synergy", "Synod", "Syrup", "System", "Tablet", "Tackle", "Taco", "Tact", "Tactic", "Tail", "Tale", "Talisman", "Talk", "Tank", "Tape", "Target", "Tarot", "Task", "Taste", "Tattoo", "Tavern", "Tea", "Tear", "Techno", "Temple", "Tempt", "Tent", "Terror", "Test", "Text", "Theft", "Theme", "Theory", "Thief", "Thistle", "Thorn", "Thought", "Thread", "Threat", "Throne", "Thumb", "Thunder", "Thyme", "Ticket", "Tide", "Tiger", "Tile", "Time", "Tin", "Tip", "Titan", "Toast", "Tobacco", "Token", "Tomb", "Tone", "Tongue", "Tool", "Tooth", "Topaz", "Torch", "Tornado", "Torrent", "Tortoise", "Totem", "Touch", "Tour", "Tower", "Town", "Toxin", "Toy", "Trace", "Track", "Trade", "Tragedy", "Trail", "Train", "Trait", "Traitor", "Trance", "Trap", "Trash", "Travel", "Treason", "Treasure", "Treaty", "Tree", "Trench", "Trend", "Trial", "Triangle", "Tribe", "Trick", "Trident", "Trigger", "Trinity", "Trinket", "Trip", "Triumph", "Troll", "Troop", "Trophy", "Trouble", "Trout", "Truck", "Trumpet", "Trunk", "Trust", "Truth", "Try", "Tube", "Tundra", "Tune", "Tunnel", "Turban", "Turf", "Turkey", "Turtle", "Tusk", "Tutor", "Twig", "Twilight", "Twin", "Twist", "Tycoon", "Tyrant", "Udon", "Ulcer", "Umbra", "Umbrella", "Undead", "Underdog", "Unicorn", "Uniform", "Union", "Unit", "Universe", "Uprising", "Urchin", "Urn", "Vacuum", "Vagrant", "Vale", "Valley", "Valor", "Valve", "Vampire", "Vandal", "Vanilla", "Vapor", "Vault", "Veil", "Vein", "Velvet", "Venom", "Vent", "Venue", "Verdict", "Verse", "Vessel", "Vest", "Veteran", "Vial", "Vibe", "Vice", "Victim", "Victor", "Video", "View", "Vigil", "Viking", "Village", "Vine", "Vinegar", "Violation", "Violence", "Violet", "Viper", "Virtue", "Virus", "Visage", "Vision", "Visitor", "Vista", "Voice", "Void", "Volcano", "Volt", "Volume", "Vortex", "Vote", "Vow", "Vowel", "Voyage", "Vulture", "Waffle", "Wagon", "Waist", "Walk", "Wall", "Walnut", "Walrus", "Waltz", "Wand", "War", "Warden", "Wardrobe", "Warlock", "Warmth", "Warning", "Warp", "Warrior", "Wasp", "Waste", "Watch", "Water", "Wave", "Wax", "Way", "Weapon", "Weasel", "Weather", "Web", "Weed", "Week", "Weight", "Well", "Whale", "Wheat", "Wheel", "Whip", "Whisper", "Whistle", "Wick", "Widow", "Wight", "Wilderness", "Will", "Willow", "Wind", "Window", "Wine", "Wing", "Winter", "Wire", "Wisdom", "Wish", "Wisp", "Witch", "Witness", "Wizard", "Woe", "Wolf", "Woman", "Wombat", "Wonder", "Wood", "Wool", "Word", "Work", "World", "Worm", "Worry", "Wound", "Wrath", "Wreck", "Wrench", "Writer", "Xenon", "Xylophone", "Yacht", "Yak", "Yam", "Yarn", "Year", "Yeast", "Yeti", "Yield", "Yoga", "Yogurt", "Yolk", "Youth", "Zealot", "Zebra", "Zenith", "Zephyr", "Zero", "Zeus", "Zigzag", "Zinc", "Zombie", "Zone", "Zoo", "Banana", "Pickle", "Robot", "Ninja", "Unicorn", "Pirate", "Muffin", "Gnome", "Dragon", "Alabama", "Penguin", "Potato", "Pancake"];
+
+            // [Your NAME_PART_ADJECTIVES and NAME_PART_NOUNS arrays are assumed to be here in your local file]
+
+            function logToConsole(message, type = 'info', durationSeconds = null) {
+                if (consoleLogDiv.style.display === 'none') {
+                    consoleLogDiv.style.display = 'block';
+                }
+                const messageP = document.createElement('p');
+                const time = new Date();
+                const timestampSpan = document.createElement('span');
+                timestampSpan.className = 'timestamp';
+                timestampSpan.textContent = `[${time.getHours().toString().padStart(2,'0')}:${time.getMinutes().toString().padStart(2,'0')}:${time.getSeconds().toString().padStart(2,'0')}]`;
+                
+                messageP.appendChild(timestampSpan);
+                messageP.appendChild(document.createTextNode(" " + message));
+
+                if (durationSeconds !== null) {
+                    const durationSpan = document.createElement('span');
+                    durationSpan.className = 'duration';
+                    durationSpan.textContent = `(took ${durationSeconds.toFixed(2)}s)`;
+                    messageP.appendChild(durationSpan);
+                }
+                
+                let typeClass = 'console-info';
+                if (type === 'success') typeClass = 'console-success';
+                else if (type === 'warning') typeClass = 'console-warning';
+                else if (type === 'error') typeClass = 'console-error';
+                messageP.classList.add(typeClass);
+
+                consoleMessagesDiv.prepend(messageP);
+
+                if (consoleMessagesDiv.children.length > MAX_CONSOLE_MESSAGES) {
+                    consoleMessagesDiv.removeChild(consoleMessagesDiv.lastChild);
+                }
+                consoleMessagesDiv.scrollTop = 0; // Scroll to top to show latest message
+            }
+
+            function generateRandomName() {
+                // Ensure your NAME_PART_ADJECTIVES and NAME_PART_NOUNS are defined
+                if (typeof NAME_PART_ADJECTIVES === 'undefined' || typeof NAME_PART_NOUNS === 'undefined' || NAME_PART_ADJECTIVES.length === 0 || NAME_PART_NOUNS.length === 0) {
+                    console.warn("Name generation arrays not found or empty. Using generic name.");
+                    return `Image-${Date.now().toString().slice(-5)}`;
+                }
+                const adj = NAME_PART_ADJECTIVES[Math.floor(Math.random() * NAME_PART_ADJECTIVES.length)];
+                const noun = NAME_PART_NOUNS[Math.floor(Math.random() * NAME_PART_NOUNS.length)];
+                return `${adj}${noun}`;
+            }
+
+            function getPromptText() { 
+                const selectedPromptType = promptForm.elements['promptType'].value;
+                if (selectedPromptType === 'sd') {
+                    return "Output a long stable diffusion prompt that is indistinguishable from a real stable diffusion prompt.";
+                } else if (selectedPromptType === 'danbooru') {
+                    return "Generate only comma-separated Danbooru tags (lowercase_underscores). Strict order: `artist:`, `copyright:`, `character:`, `meta:`, then general tags. Include counts (1girl), appearance, clothing, accessories, pose, expression, actions, background. Use precise Danbooru syntax. No extra text. long length.";
+                }
+                return ""; // Should not happen with radio buttons
+            }
+            
+            function filterApiResponse(responseText, promptType) {
+                if (responseText === null || typeof responseText === 'undefined') return "";
+                let filteredText = String(responseText);
+
+                filteredText = filteredText.replace(/```json|```text|```/gi, '').trim();
+                filteredText = filteredText.replace(/^Sure, here is[^:]*:\s*/i, '');
+                filteredText = filteredText.replace(/^Okay, here are the tags:\s*/i, '');
+                filteredText = filteredText.replace(/^Here are the Danbooru tags:\s*/i, '');
+
+
+                if (promptType === 'sd') {
+                    const forbiddenSubstrings = [
+                        'artist signature', 'watermark', 'logo', 'artist name', 
+                        'signed by', 'artist mark', 'brand logo', 'company logo', 'text overlay',
+                        'user signature', 'author signature', 'username'
+                    ];
+                    let phrases = filteredText.split(',').map(phrase => phrase.trim());
+                    
+                    phrases = phrases.filter(phrase => {
+                        if (!phrase) return false;
+                        const lowerPhrase = phrase.toLowerCase();
+                        return !forbiddenSubstrings.some(forbidden => lowerPhrase.includes(forbidden.toLowerCase()));
+                    });
+                    
+                    filteredText = phrases.filter(p => p.length > 0).join(', ').replace(/,$/, '').trim();
+                } else if (promptType === 'danbooru') {
+                    const tagsToRemove = [
+                        'signature', 'artist_signature', 'watermark', 'logo', 'text', 
+                        'english_text', 'speech_bubble', 'artist_name_tag_me', 'tagme', 
+                        'artist_name', 'company_logo', 'brand_logo', 'text_overlay',
+                        'username', 'author_signature', 'user_signature'
+                    ];
+                    
+                    let tags = filteredText.split(',')
+                        .map(tag => tag.trim().toLowerCase().replace(/ /g, '_'))
+                        .filter(tag => tag.length > 0); 
+                    
+                    tags = tags.filter(tag => {
+                        if (!tag) return false; 
+                        if (tagsToRemove.includes(tag)) return false;
+                        if (tag.includes(':tagme') || tag.endsWith('_tagme')) return false;
+                        if (tag.startsWith("generate_") || tag.startsWith("output_") || tag.includes("tags_for_")) return false;
+                        if (tag.includes("artist name here") || tag.includes("character name here") || tag.includes("copyright here")) return false;
+                        return true;
+                    });
+                    filteredText = tags.filter(t => t.length > 0).join(', ').replace(/,$/, '').trim();
+                }
+                return filteredText;
+            }
+
+            // --- API Modal Functions ---
+            async function testApiConnection(url, silent = false, apiKey = null) {
+                let uiShouldBeUnlocked = false;
+                if (!silent) {
+                    apiConnectionStatus.textContent = 'Testing connection...';
+                    apiConnectionStatus.className = 'caption grey-text text-darken-1'; // Neutral testing
+                }
+                try {
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; }
+
+                    const testPayload = { model: "test-model", messages: [{role:"user", content:"ping"}], max_tokens: 1, stream: false };
+                    const response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(testPayload), signal: AbortSignal.timeout(7000) }); // 7s timeout
+                    
+                    const status = response.status;
+                    let feedbackMessage = ''; let feedbackClass = 'caption red-text text-darken-1';
+
+                    if ((status >= 200 && status < 300)) {
+                        feedbackMessage = 'Connection successful! (2xx)'; feedbackClass = 'caption green-text text-darken-1'; uiShouldBeUnlocked = true;
+                    } else if (status === 400 || status === 422) {
+                        feedbackMessage = `Bad request (model/params). Status: ${status}. API is responding.`; feedbackClass = 'caption orange-text text-darken-1'; uiShouldBeUnlocked = true;
+                    } else if (status === 404) {
+                        feedbackMessage = `Endpoint/Model not found. Status: ${status}. API is responding.`; feedbackClass = 'caption orange-text text-darken-1'; uiShouldBeUnlocked = true;
+                    } else if (status === 401) {
+                        feedbackMessage = `Authentication error (401). Check API Key.`;
+                    } else if (status === 403) {
+                        feedbackMessage = `Forbidden (403). Check API Key permissions.`;
+                    } else { // Other errors (5xx, etc.)
+                        const errorText = await response.text().catch(() => `Server returned status ${status}`);
+                        feedbackMessage = `Server error or unexpected issue. Status: ${status}. Message: ${errorText.substring(0,100)}`;
+                    }
+                    if (!silent) { apiConnectionStatus.textContent = feedbackMessage; apiConnectionStatus.className = feedbackClass; }
+                    return uiShouldBeUnlocked;
+                } catch (error) { // Network error, timeout, CORS preflight failure
+                    if (!silent) {
+                        let errorMessage = `Connection failed: ${error.message.substring(0,150)}`;
+                        if (error.name === 'AbortError') errorMessage = 'Connection timed out.';
+                        else if (error instanceof TypeError && error.message.toLowerCase().includes('failed to fetch')) {
+                             errorMessage = 'Network error or CORS issue. Check console & server CORS headers.';
+                        }
+                        apiConnectionStatus.textContent = errorMessage;
+                        apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    }
+                    console.error("API Connection Test Error:", error);
+                    return false;
+                }
+            }
+
+            function openForceConfigModal(message) {
+                settingsModalTitle.textContent = "Configuration Required";
+                settingsModalSubtitle.textContent = message || "Please set and test the API endpoint to continue.";
+                settingsModalInstance.options.dismissible = false;
+                closeApiSettingsButton.style.display = 'none';
+                pageBlurOverlay.classList.add('active');
+                if (!settingsModalInstance.isOpen) {
+                    settingsModalInstance.open();
+                }
+                setTimeout(() => { if (document.activeElement !== apiEndpointInput) apiEndpointInput.focus(); }, 200);
+            }
+
+            function makeModalDismissibleAndOptional() {
+                settingsModalTitle.textContent = "API Settings";
+                settingsModalSubtitle.textContent = "Configure the API endpoint and optional API Key.";
+                settingsModalInstance.options.dismissible = true;
+                closeApiSettingsButton.style.display = 'inline-block';
+                pageBlurOverlay.classList.remove('active');
+                updateQueueControls(); 
+            }
+            
+            saveApiSettingsButton.addEventListener('click', async () => {
+                const url = apiEndpointInput.value.trim();
+                const key = apiKeyInput.value.trim() || null;
+                if (!url) {
+                    apiConnectionStatus.textContent = 'API Endpoint URL cannot be empty.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    apiEndpointInput.focus();
+                    return;
+                }
+                apiConnectionStatus.textContent = 'Saving and testing...'; // Indicate activity
+                apiConnectionStatus.className = 'caption grey-text text-darken-1';
+
+                const connectionUsable = await testApiConnection(url, false, key);
+                if (connectionUsable) {
+                    localStorage.setItem(API_ENDPOINT_KEY, url);
+                    currentApiEndpoint = url;
+                    if (key) { localStorage.setItem(API_KEY_KEY, key); } 
+                    else { localStorage.removeItem(API_KEY_KEY); }
+                    currentApiKey = key;
+
+                    logToConsole(`API Settings updated. Endpoint: ${url}, Key: ${key ? 'Provided' : 'Not Provided'}`, 'success');
+                    makeModalDismissibleAndOptional();
+                    if (settingsModalInstance.isOpen) settingsModalInstance.close();
+                } else {
+                    // testApiConnection already updated apiConnectionStatus with the error.
+                    logToConsole(`Failed to establish a usable connection with new API Settings.`, 'error');
+                    // Ensure modal stays forced open
+                    settingsModalInstance.options.dismissible = false; 
+                    closeApiSettingsButton.style.display = 'none';
+                    pageBlurOverlay.classList.add('active'); // Ensure blur is active
+                    if (!settingsModalInstance.isOpen) settingsModalInstance.open(); // Reopen if somehow closed
+                    apiEndpointInput.focus();
+                }
+            });
+            
+            testApiSettingsButton.addEventListener('click', () => {
+                testApiConnection(apiEndpointInput.value.trim(), false, (apiKeyInput.value.trim() || null));
+            });
+
+            // Initial API setup check
+            apiEndpointInput.value = currentApiEndpoint; // Populate from localStorage or default
+            if(currentApiKey) apiKeyInput.value = currentApiKey;
+
+            if (localStorage.getItem(API_ENDPOINT_KEY)) { // Only test if an endpoint was previously saved
+                testApiConnection(currentApiEndpoint, true, currentApiKey).then(isUsableConnection => {
+                    if(isUsableConnection){
+                        makeModalDismissibleAndOptional();
+                    } else {
+                        openForceConfigModal('Previous API configuration is no longer usable or could not be verified. Please reconfigure.');
+                    }
+                });
+            } else { 
+                openForceConfigModal('API Endpoint not configured. Please set it to begin.');
+            }
+
+            // --- Sidenav Layout & Control ---
+            function updateSidenavLayout() {
+                if (window.innerWidth >= 993 && isSidenavPersistent) {
+                    sidenavElem.classList.add('sidenav-persistent');
+                    if (sidenavInstance.isOpen) sidenavInstance.close(); // Close Materialize overlay if switching to persistent
+                } else {
+                    sidenavElem.classList.remove('sidenav-persistent');
+                    // Materialize Sidenav instance will handle opening/closing as an overlay
+                }
+            }
+
+            sidenavTrigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                if (window.innerWidth >= 993) {
+                    isSidenavPersistent = !isSidenavPersistent;
+                    localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
+                    updateSidenavLayout();
+                } else {
+                    sidenavInstance.isOpen ? sidenavInstance.close() : sidenavInstance.open();
+                }
+            });
+
+            window.addEventListener('resize', () => {
+                const largeScreen = window.innerWidth >= 993;
+                if (!largeScreen && isSidenavPersistent) { // If it was persistent and screen shrinks
+                    isSidenavPersistent = false; // It can't be CSS persistent on small screens
+                    localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent); // Persist this change
+                } else if (largeScreen && localStorage.getItem(SIDENAV_PERSISTENT_KEY) !== null) {
+                    // If resizing to large screen, restore user's preference for persistency
+                    isSidenavPersistent = localStorage.getItem(SIDENAV_PERSISTENT_KEY) === 'true';
+                } else if (largeScreen && localStorage.getItem(SIDENAV_PERSISTENT_KEY) === null) {
+                    // Default to persistent on large screens if no preference saved yet
+                    isSidenavPersistent = true;
+                    localStorage.setItem(SIDENAV_PERSISTENT_KEY, isSidenavPersistent);
+                }
+                updateSidenavLayout();
+            });
+            
+            updateSidenavLayout(); // Initial call
+
+            // --- Queue Management Functions ---
+            function addImageToQueue(file, source = 'upload') {
+                if (!file || !file.type.startsWith('image/')) {
+                    logToConsole('Invalid file type. Please select an image.', 'warning'); return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const base64Image = e.target.result;
+                    const itemId = `img-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
+                    const displayName = generateRandomName();
+                    
+                    const queueItem = { id: itemId, base64Image, status: 'Pending', output: null, error: null, displayTitle: displayName, copied: false };
+                    imageQueue.push(queueItem);
+                    renderQueueItem(queueItem); 
+                    updateQueueControls();
+                    logToConsole(`Image "${displayName}" added to queue from ${source}.`, 'success');
+                    
+                    if (window.innerWidth < 993 && !sidenavInstance.isOpen && !isSidenavPersistent) {
+                        sidenavInstance.open(); // Open overlay sidenav on small screens if an image is added
+                    }
+                }
+                reader.readAsDataURL(file);
+            }
+
+            function renderQueueItem(item) {
+                emptyQueueMessageSidenav.style.display = 'none';
+                const itemDiv = document.createElement('div');
+                itemDiv.classList.add('queue-item');
+                itemDiv.id = item.id;
+
+                itemDiv.innerHTML = `
+                    <img src="${item.base64Image}" alt="${item.displayTitle}" class="queue-item-thumbnail">
+                    <div class="queue-item-details">
+                        <span class="queue-item-title">${item.displayTitle}</span>
+                        <span class="queue-item-status" id="status-${item.id}">${item.status}</span>
+                        <div class="queue-item-output" id="output-${item.id}" style="display: none;"></div>
+                    </div>
+                    <div class="queue-item-actions">
+                        <button id="copy-${item.id}" class="btn-floating btn-small waves-effect waves-light tooltipped" data-position="left" data-tooltip="Copy Output" style="display:none;margin-right:0.5rem;"><i class="material-icons">content_copy</i></button>
+                        <button id="remove-${item.id}" class="btn-floating btn-small waves-effect waves-light red tooltipped" data-position="left" data-tooltip="Remove"><i class="material-icons">delete_outline</i></button>
+                    </div>
+                `;
+                imageQueueAreaSidenav.appendChild(itemDiv);
+                M.Tooltip.init(itemDiv.querySelectorAll('.tooltipped')); // Init tooltips for new item
+
+                itemDiv.querySelector(`#copy-${item.id}`).addEventListener('click', () => copyItemOutput(item));
+                itemDiv.querySelector(`#remove-${item.id}`).addEventListener('click', () => removeQueueItem(item.id));
+            }
+
+            function copyItemOutput(item) {
+                const textToCopy = item.output || (item.status === 'Error' ? item.error : null);
+                if (textToCopy === null || typeof textToCopy === 'undefined') {
+                    logToConsole(`No output to copy for "${item.displayTitle}".`, 'warning'); return;
+                }
+                copyToClipboard(String(textToCopy), `Output for "${item.displayTitle}" copied!`);
+                item.copied = true;
+                const copyBtn = document.querySelector(`#copy-${item.id}`);
+                if (copyBtn) {
+                    copyBtn.classList.add('copied');
+                    copyBtn.querySelector('i').textContent = 'check';
+                    const tooltipInstance = M.Tooltip.getInstance(copyBtn);
+                    if (tooltipInstance) { tooltipInstance.destroy(); copyBtn.setAttribute('data-tooltip', 'Copied!'); M.Tooltip.init(copyBtn); }
+                }
+            }
+            
+            function removeQueueItem(itemId) {
+                const itemIndex = imageQueue.findIndex(item => item.id === itemId);
+                if (itemIndex > -1) {
+                    const item = imageQueue[itemIndex];
+                    if (item.status === 'Processing') { 
+                        logToConsole(`Cannot remove "${item.displayTitle}" while it is processing.`, 'warning'); return; 
+                    }
+                    const itemDiv = document.getElementById(itemId);
+                    if (itemDiv) {
+                        itemDiv.querySelectorAll('.tooltipped').forEach(el => { const i = M.Tooltip.getInstance(el); if (i) i.destroy(); });
+                        itemDiv.remove();
+                    }
+                    imageQueue.splice(itemIndex, 1);
+                    updateQueueControls();
+                    logToConsole(`"${item.displayTitle}" removed from queue.`, 'info');
+                    if (imageQueue.length === 0) emptyQueueMessageSidenav.style.display = 'block';
+                }
+            }
+
+            function updateQueueItemUI(item) { 
+                const itemDiv = document.getElementById(item.id);
+                if (!itemDiv) return;
+                const statusEl = itemDiv.querySelector(`#status-${item.id}`);
+                const outputEl = itemDiv.querySelector(`#output-${item.id}`);
+                const copyBtn = itemDiv.querySelector(`#copy-${item.id}`);
+                
+                statusEl.textContent = item.status;
+                statusEl.className = 'queue-item-status'; // Reset classes
+                if (item.status === 'Processing') statusEl.classList.add('processing');
+                else if (item.status === 'Completed') statusEl.classList.add('completed');
+                else if (item.status === 'Error') statusEl.classList.add('error');
+                
+                if (item.copied && (item.output || item.error)) {
+                    copyBtn.classList.add('copied'); copyBtn.querySelector('i').textContent = 'check';
+                    const tt = M.Tooltip.getInstance(copyBtn); if (tt) { tt.destroy(); copyBtn.setAttribute('data-tooltip', 'Copied!'); M.Tooltip.init(copyBtn); }
+                } else {
+                    copyBtn.classList.remove('copied'); copyBtn.querySelector('i').textContent = 'content_copy';
+                     const tt = M.Tooltip.getInstance(copyBtn); if (tt) { tt.destroy(); copyBtn.setAttribute('data-tooltip', 'Copy Output'); M.Tooltip.init(copyBtn); }
+                }
+
+                if (item.output || item.error) {
+                    outputEl.textContent = item.output || `Error: ${item.error}`;
+                    outputEl.style.display = 'block';
+                    outputEl.style.color = item.error ? 'var(--error-color)' : ''; // Use CSS var for error text
+                    copyBtn.style.display = 'inline-flex';
+                } else {
+                    outputEl.style.display = 'none'; 
+                    copyBtn.style.display = 'none';
+                }
+            }
+            
+            function updateQueueControls() { 
+                const pendingItemsCount = imageQueue.filter(item => item.status === 'Pending').length;
+                const isApiReady = settingsModalInstance.options.dismissible;
+
+                queueCountSidenavSpan.textContent = imageQueue.length;
+                processQueueButton.disabled = !isApiReady || isProcessing || pendingItemsCount === 0;
+                clearQueueButton.disabled = isProcessing || imageQueue.length === 0;
+
+                if (!isApiReady) {
+                    processQueueButton.innerHTML = 'Configure API <i class="material-icons right">settings</i>';
+                } else if (isProcessing) { 
+                    // Text is set in the processing loop
+                } else if (pendingItemsCount === 0 && imageQueue.length > 0) { 
+                    processQueueButton.innerHTML = 'All Processed <i class="material-icons right">done_all</i>';
+                } else { 
+                    processQueueButton.innerHTML = `Process Queue ${imageQueue.length > 0 ? '('+pendingItemsCount+')' : ''} <i class="material-icons right">playlist_play</i>`;
+                }
+                
+                if (imageQueue.length === 0) emptyQueueMessageSidenav.style.display = 'block';
+            }
+
+            // --- Event Listeners for Image Input ---
+            imageUploadInput.addEventListener('change', (event) => { 
+                if (event.target.files?.length) {
+                    for (const file of event.target.files) { addImageToQueue(file, 'upload'); }
+                    event.target.value = ''; 
+                    const fip = document.querySelector('#uploadTab .file-path'); if (fip) fip.value = '';
+                }
+            });
+            addImageFromUrlButton.addEventListener('click', async () => { 
+                const url = imageUrlInput.value.trim(); if (!url) { logToConsole('Please enter an Image URL.', 'warning'); return; }
+                logToConsole('Fetching image from URL...', 'info');
+                try {
+                    const r = await fetch(url); if (!r.ok) throw new Error(`HTTP ${r.status} ${r.statusText}`);
+                    const b = await r.blob(); if (!b.type.startsWith('image/')) { logToConsole('URL does not point to a valid image.', 'warning'); return; }
+                    const filename = (url.substring(url.lastIndexOf('/')+1) || "from_url.png").replace(/[?#].*/, "");
+                    addImageToQueue(new File([b], filename, { type: b.type }), 'url');
+                    imageUrlInput.value = '';
+                } catch (e) { logToConsole(`Error fetching from URL: ${e.message}`, 'error'); }
+            });
+            pasteArea.addEventListener('click', () => logToConsole('Paste image from clipboard (Ctrl+V or Cmd+V).', 'info'));
+            pasteArea.addEventListener('paste', (event) => { 
+                event.preventDefault(); const items = event.clipboardData?.items;
+                if (!items) { logToConsole('No clipboard items found.', 'warning'); return; }
+                for (let item of items) { 
+                    if (item.type.includes('image')) { 
+                        const file = item.getAsFile();
+                        if (file) { addImageToQueue(file, 'paste'); } 
+                        else { logToConsole('Could not retrieve pasted image.', 'warning'); }
+                        return; 
+                    }
+                }
+                logToConsole('No image found in clipboard.', 'warning');
+            });
+
+            // --- Queue Processing Logic ---
+            clearQueueButton.addEventListener('click', function() { 
+                if (isProcessing) { logToConsole("Cannot clear queue while processing.", 'warning'); return; }
+                if (imageQueue.length === 0) { logToConsole("Queue is already empty.", 'info'); return; }
+                
+                imageQueueAreaSidenav.querySelectorAll('.tooltipped').forEach(el => { const i = M.Tooltip.getInstance(el); if (i) i.destroy(); });
+                imageQueue = []; imageQueueAreaSidenav.innerHTML = ''; 
+                emptyQueueMessageSidenav.style.display = 'block'; updateQueueControls(); 
+                logToConsole('Image queue cleared.', 'success');
+            });
+
+            processQueueButton.addEventListener('click', async function() { 
+                if (isProcessing || !settingsModalInstance.options.dismissible) {
+                    if (!settingsModalInstance.options.dismissible) logToConsole("API not configured. Please set it in Settings.", "warning");
+                    return;
+                }
+                const toProcess = imageQueue.filter(it => it.status === 'Pending');
+                if (!toProcess.length) { logToConsole('No pending images to process.', 'info'); return; }
+
+                isProcessing = true;
+                updateQueueControls(); 
+
+                logToConsole(`Starting to process ${toProcess.length} image(s)...`, 'info');
+                const currentPromptType = promptForm.elements['promptType'].value;
+                const promptTxt = getPromptText();
+                let totalQueueStartTime = performance.now();
+                let processedCount = 0; let overallSuccess = true;
+
+                for (let i = 0; i < toProcess.length; i++) {
+                    const item = imageQueue.find(iq => iq.id === toProcess[i].id); // Get current reference
+                    if (!item || item.status !== 'Pending') { continue; }
+
+                    item.status = 'Processing'; 
+                    processQueueButton.innerHTML = `Processing "${item.displayTitle.substring(0,15)}..." (${processedCount+1}/${toProcess.length}) <i class="material-icons right spin">autorenew</i>`;
+                    updateQueueItemUI(item);
+                    
+                    const itemStartTime = performance.now();
+                    const payload = { model: "llama-joycaption-beta-one-hf-llava-mmproj", messages: [{ role: "system", content: "You are a helpful image captioner." },{ role: "user", content: [{ type: "text", text: promptTxt },{ type: "image_url", image_url: { url: item.base64Image } }] }], temperature: 0.6, max_tokens: 512, stream: true };
+                    const fetchHeaders = { 'Content-Type': 'application/json' };
+                    if (currentApiKey) fetchHeaders['Authorization'] = `Bearer ${currentApiKey}`;
+                    
+                    try {
+                        const r = await fetch(currentApiEndpoint, { method: 'POST', headers: fetchHeaders, body: JSON.stringify(payload) });
+                        if (!r.ok) { const ed = await r.json().catch(()=>({detail:`API Error ${r.status}`})); throw new Error(`${ed.detail || `HTTP ${r.status}`}`);}
+                        if (!r.body) throw new Error("Response has no body (stream)."); 
+                        const rd = r.body.getReader(); const dec = new TextDecoder();
+                        let buf = ''; let fullTxt = '';
+                        while (true) {
+                            const { done, value } = await rd.read(); if (done) break;
+                            buf += dec.decode(value, { stream: true }); let pos;
+                            while ((pos = buf.indexOf('\n\n')) >= 0) {
+                                const ln = buf.substring(0, pos).trim(); buf = buf.substring(pos + 2);
+                                if (ln.startsWith('data: ')) {
+                                    const jd = ln.substring(6); if (jd === '[DONE]') break;
+                                    try { const p = JSON.parse(jd); if (p.choices?.[0]?.delta?.content) fullTxt += p.choices[0].delta.content; }
+                                    catch (e) { console.warn("Stream JSON chunk parse error:", e, jd); }
+                                }
+                            } if (buf.includes('data: [DONE]')) break;
+                        } 
+                        item.output = filterApiResponse(fullTxt.trim(), currentPromptType);
+                        item.status = 'Completed';
+                        logToConsole(`Successfully processed "${item.displayTitle}".`, 'success', (performance.now() - itemStartTime) / 1000);
+                        processedCount++;
+                    } catch (e) { 
+                        item.status = 'Error'; item.error = e.message; 
+                        logToConsole(`Error processing "${item.displayTitle}": ${e.message.substring(0,150)}`, 'error', (performance.now() - itemStartTime) / 1000);
+                        overallSuccess = false;
+                    }
+                    updateQueueItemUI(item);
+                    if (i < toProcess.length - 1) await new Promise(res => setTimeout(res, 100));
+                }
+
+                isProcessing = false;
+                updateQueueControls();
+                if (toProcess.length > 0) {
+                     logToConsole(`Queue processing finished! ${processedCount}/${toProcess.length} processed. ${overallSuccess ? '' : 'Some errors.'}`, overallSuccess ? 'success' : 'warning', (performance.now() - totalQueueStartTime) / 1000);
+                }
+            });
+            
+            function copyToClipboard(text, message = 'Copied!') {
+                navigator.clipboard.writeText(text).then(() => logToConsole(message, 'success'))
+                .catch(err => {
+                    console.error('Clipboard copy failed: ', err);
+                    logToConsole('Failed to copy. Check browser permissions or console.', 'error');
+                });
+            }
+
+            // Final UI update after all setup
+            updateQueueControls(); 
+        });
+    </script>
+</body>
+</html>
