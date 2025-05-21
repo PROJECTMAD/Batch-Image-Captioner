@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.1b">
+    <meta name="app-version" content="1.0.1c">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Image Captioner</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -115,10 +115,10 @@
         --btn-disabled-text: #757575;
 
         /* Console Messages */
-        --console-info-bg: #1a237e; --console-info-text: #c5cae9;    /* Indigo dark */
-        --console-success-bg: #1b5e20; --console-success-text: #c8e6c9; /* Green dark */
-        --console-warning-bg: #e65100; --console-warning-text: #ffe0b2; /* Orange dark */
-        --console-error-bg: #b71c1c; --console-error-text: #ffcdd2;     /* Red dark */
+        --console-info-bg: #1a237e91; --console-info-text: #c5cae9;    /* Indigo dark */
+        --console-success-bg: #1b5e2091; --console-success-text: #c8e6c9; /* Green dark */
+        --console-warning-bg: #e6510091; --console-warning-text: #ffe0b2; /* Orange dark */
+        --console-error-bg: #b71c1c91; --console-error-text: #ffcdd2;     /* Red dark */
 
         /* Queue Item Specifics */
         --queue-item-output-bg: #2c2c2e; /* Matching input bg */
@@ -295,6 +295,9 @@
     body.dark-theme .tabs { border-bottom-color: var(--border-color); }
 
     /* Input Fields (general styling for Materialize) */
+    .input-field .helper-text {
+        color: var(--input-text-color);
+    }
     .input-field label { color: var(--input-label-color); }
     .input-field input[type=text]:not(.browser-default),
     .input-field input[type=url]:not(.browser-default),
@@ -401,6 +404,14 @@
     .material-icons.spin { animation: spin 1.5s linear infinite; line-height: inherit; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
+    /* --- Dropdown --- */
+    .dropdown-content {
+        background-color: var(--input-bg) !important;
+    }
+    .dropdown-content li > a, .dropdown-content li > span {
+        color: var(--input-text-color) !important;
+    }
+
     /* --- Sidenav Queue Item Styling --- */
     #imageQueueSidenav .subheader {
         font-weight: 500; padding: 0 16px; line-height:48px;
@@ -503,13 +514,25 @@
         background-color: var(--card-bg);
         color: var(--text-color);
         border-radius: 6px;
-        max-width: 500px; /* Constrain modal width */
+        max-height: 800px !important;
+        max-width: 1280px !important;
+        margin: auto;
+        overflow-y: hidden;
+        user-select: none;
+        -ms-user-select: none;
+        -moz-user-select: none;
+        -webkit-user-select: none;
     }
     .modal .modal-content { padding: 24px; }
     .modal .modal-footer {
         background-color: var(--card-bg);
         border-top: 1px solid var(--card-border-color);
         padding: 8px 24px; /* Adjust padding */
+    }
+    .modal.modal-fixed-footer {
+        padding: 0;
+        height: 80vh;
+        width: 80vw;
     }
     .modal .modal-footer .btn-flat {
         color: var(--accent-color);
@@ -519,14 +542,28 @@
     body.dark-theme .modal .modal-footer { border-top-color: var(--border-color); }
     
     /* Materialize Tooltip Theming */
+    .material-tooltip {
+        background-color: #343434; /* Or a specific tooltip background variable */
+        /* Or, if you only want the .tooltip-content to have a background: */
+        /* background-color: transparent !important; */
+        /* You might also want to adjust its padding if it's too much */
+        /* padding: 0; */ /* If you only want padding on .tooltip-content */
+    }
+
+    body.dark-theme .material-tooltip {
+        background-color: #000000; /* Use the same variable as above */
+        /* Or, for dark theme if you want it different and not transparent: */
+        /* background-color: #2a2a2a; */ /* Example: slightly different dark */
+    }
     .material-tooltip .tooltip-content {
-        background-color: #323232; /* Standard dark tooltip */
+        background-color: #343434; /* Use the same variable as above */
         color: #fff;
         font-size: 0.9rem;
         padding: 6px 10px;
+        border-radius: 2px; /* Match Materialize's default outer radius if desired */
     }
     body.dark-theme .material-tooltip .tooltip-content {
-        background-color: #424242; /* Darker for dark theme if needed, or use same */
+        background-color: #000000; /* Use the same variable as above */
         color: #e0e0e0;
     }
 
@@ -621,8 +658,7 @@
                         <li><a href="#!" data-format="raw">RAW</a></li>
                         <li><a href="#!" data-format="json">JSON</a></li>
                     </ul>
-
-                    <a class="waves-effect waves-light btn-small tooltipped dropdown-trigger blue-grey lighten-1" href="#!" data-target="downloadOptionsDropdown" id="downloadAllOutputsButton" data-position="bottom" data-tooltip="Download All Outputs" style="margin-left: 5px;" disabled><i class="material-icons left" style="margin-right: 4px;">file_download</i>Download</a>
+                    <a class="waves-effect waves-light btn-small tooltipped dropdown-trigger blue-grey lighten-1" href="#!" data-target="downloadOptionsDropdown" id="downloadAllOutputsButton" data-position="left" data-tooltip="Download All Outputs" style="margin-left: 5px;" disabled><i class="material-icons left" style="margin-right: 4px;">file_download</i>Download</a>
                     <ul id="downloadOptionsDropdown" class="dropdown-content">
                         <li><a href="#!" data-format="raw">RAW</a></li>
                         <li><a href="#!" data-format="json">JSON</a></li>
@@ -637,34 +673,65 @@
     </ul>
 
     <!-- Settings Modal -->
-    <div id="settingsModal" class="modal">
-        <div class="modal-content">
-            <h4 id="settingsModalTitle">API Settings</h4>
-            <p id="settingsModalSubtitle">Configure the API server, paths, model, and optional API Key.</p>
-            <div class="input-field">
-                <input id="apiBaseUrlInput" type="url" value="http://localhost:6969">
-                <label for="apiBaseUrlInput">Base Server URL (e.g., http://localhost:6969)</label>
+    <div id="settingsModal" class="modal modal-fixed-footer"> <!-- Added modal-fixed-footer for potentially taller content -->
+        <div class="modal-content" style="padding-bottom: 10px;"> <!-- Adjusted padding -->
+            <h4 id="settingsModalTitle" style="margin-bottom: 20px;">Settings</h4> <!-- More general title -->
+
+            <div class="row" style="margin-bottom: 0;">
+                <!-- Column 1: API Settings -->
+                <div class="col s12 m6">
+                    <h5>API Configuration</h5>
+                    <p class="caption" style="margin-top:-10px; margin-bottom:15px;">Server, paths, model, and API Key.</p>
+                    <div class="input-field">
+                        <input id="apiBaseUrlInput" type="url" value="http://localhost:6969">
+                        <label for="apiBaseUrlInput">Base Server URL</label>
+                    </div>
+                    <div class="input-field">
+                        <input id="apiChatPathInput" type="text" value="/v1/chat/completions">
+                        <label for="apiChatPathInput">Chat Completion Path</label>
+                    </div>
+                    <div class="input-field">
+                        <select id="apiModelSelect">
+                            <option value="" disabled selected>Loading models...</option>
+                            <!-- Models will be populated here by JS -->
+                        </select>
+                        <label for="apiModelSelect">Model</label>
+                    </div>
+                    <div class="input-field">
+                        <input id="apiKeyInput" type="password">
+                        <label for="apiKeyInput">API Key (Optional)</label>
+                    </div>
+                    <p id="apiConnectionStatus" class="caption" style="min-height: 2.4em; margin-top:10px; font-weight: 500;"></p> <!-- Increased min-height for two lines -->
+                </div>
+
+                <!-- Column 2: Output Format Settings -->
+                <div class="col s12 m6">
+                    <h5>Output Formatting</h5>
+                    <p class="caption" style="margin-top:-10px; margin-bottom:15px;">Customize "Copy/Download All" formats.</p>
+
+                    <div class="input-field">
+                        <input id="rawOutputDelimiterInput" type="text" value="\n\n">
+                        <label for="rawOutputDelimiterInput">RAW Output Delimiter</label>
+                        <span class="helper-text">Use '\n' for newline, '\t' for tab. Current default: two newlines.</span>
+                    </div>
+
+                    <div class="input-field" style="margin-top: 20px;">
+                        <textarea id="jsonOutputSchemaInput" class="materialize-textarea" style="min-height: 180px; font-family: 'SFMono-Regular', Consolas, Menlo, monospace; font-size: 0.9em;"></textarea>
+                        <label for="jsonOutputSchemaInput">JSON Output Schema Template</label>
+                        <span class="helper-text">
+                            Available Placeholders:<br>
+                            `{{timestamp}}` - ISO date string of export time.<br>
+                            `{{outputs_map_indexed}}` - Comma-separated key-values like "1":"output1", "2":"output2".<br>
+                            `{{outputs_map_titled}}` - Comma-separated key-values like "ImgName1":"output1".<br>
+                            `{{outputs_array_detailed}}` - Comma-separated JSON objects like {"index":1, "output":"out1", "displayTitle":"Title1"}.
+                        </span>
+                    </div>
+                </div>
             </div>
-            <div class="input-field">
-                <input id="apiChatPathInput" type="text" value="/v1/chat/completions">
-                <label for="apiChatPathInput">Chat Completion Path (e.g., /v1/chat/completions)</label>
-            </div>
-            <div class="input-field">
-                <select id="apiModelSelect">
-                    <option value="" disabled selected>Loading models...</option>
-                    <!-- Models will be populated here by JS -->
-                </select>
-                <label for="apiModelSelect">Model</label>
-            </div>
-            <div class="input-field">
-                <input id="apiKeyInput" type="password">
-                <label for="apiKeyInput">API Key (Optional - Bearer Token)</label>
-            </div>
-            <p id="apiConnectionStatus" class="caption" style="min-height: 1.2em; margin-top:10px; font-weight: 500;"></p>
         </div>
         <div class="modal-footer">
-            <button class="waves-effect waves-green btn-flat" id="saveApiSettingsButton">Save & Test</button>
-            <button class="waves-effect waves-blue btn-flat" id="testApiSettingsButton">Test Connection</button>
+            <button class="waves-effect waves-green btn-flat" id="saveApiSettingsButton">Save All Settings</button>
+            <button class="waves-effect waves-blue btn-flat" id="testApiSettingsButton">Test API Only</button>
             <button class="modal-close waves-effect waves-grey btn-flat" id="closeApiSettingsButton" style="display:none;">Close</button>
         </div>
     </div>
@@ -681,6 +748,16 @@
         const API_KEY_KEY = 'BiCaption_apiKey';
         const THEME_KEY = 'BiCaption_theme';
         const SIDENAV_PERSISTENT_KEY = 'BiCaption_sidenavPersistent';
+        const RAW_DELIMITER_KEY = 'BiCaption_rawOutputDelimiter';
+        const JSON_SCHEMA_KEY = 'BiCaption_jsonOutputSchema';
+        const DEFAULT_JSON_SCHEMA = `{
+    "app_name": "${APP_TITLE}",
+    "app_version": "${APP_VERSION}",
+    "export_timestamp": "{{timestamp}}",
+    "caption_data_indexed": {
+        {{outputs_map_indexed}}
+    }
+}`;
 
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -707,7 +784,17 @@
             // --- API Settings Modal ---
             const settingsModalElement = document.getElementById('settingsModal');
             const settingsModalInstance = M.Modal.init(settingsModalElement, {
-                // onOpenEnd: () => { if (pageBlurOverlay.classList.contains('active')) apiBaseUrlInput.focus(); }
+                onOpenEnd: () => {
+                    rawOutputDelimiterInput.value = currentRawDelimiter;
+                    jsonOutputSchemaInput.value = currentJsonSchema;
+
+                    M.textareaAutoResize(jsonOutputSchemaInput);
+                    M.updateTextFields();
+
+                    if (settingsModalInstance.options.dismissible === false) {
+                        setTimeout(() => { if (document.activeElement !== apiBaseUrlInput) apiBaseUrlInput.focus(); }, 100);
+                    }
+                }
             });
             const apiBaseUrlInput = document.getElementById('apiBaseUrlInput');
             const apiChatPathInput = document.getElementById('apiChatPathInput');
@@ -718,13 +805,16 @@
             const closeApiSettingsButton = document.getElementById('closeApiSettingsButton');
             const apiConnectionStatus = document.getElementById('apiConnectionStatus');
             const settingsModalTitle = document.getElementById('settingsModalTitle');
-            const settingsModalSubtitle = document.getElementById('settingsModalSubtitle');
-            
+            const rawOutputDelimiterInput = document.getElementById('rawOutputDelimiterInput');
+            const jsonOutputSchemaInput = document.getElementById('jsonOutputSchemaInput');
+
             let currentBaseUrl = localStorage.getItem(BASE_SERVER_URL_KEY) || 'http://localhost:6969';
             let currentChatPath = localStorage.getItem(CHAT_COMPLETION_PATH_KEY) || '/v1/chat/completions';
             let currentSelectedModel = localStorage.getItem(SELECTED_MODEL_KEY) || 'llama-joycaption-beta-one-hf-llava-mmproj';
             let currentApiKey = localStorage.getItem(API_KEY_KEY) || null;
             let availableModels = []; // To store fetched models
+            let currentRawDelimiter = localStorage.getItem(RAW_DELIMITER_KEY) || '\\n\\n';
+            let currentJsonSchema = localStorage.getItem(JSON_SCHEMA_KEY) || DEFAULT_JSON_SCHEMA;
 
 
             // --- Theme Switcher ---
@@ -1024,7 +1114,6 @@
 
             function openForceConfigModal(message) {
                 settingsModalTitle.textContent = "Configuration Required";
-                settingsModalSubtitle.textContent = message || "Please set and test the API endpoint to continue.";
                 settingsModalInstance.options.dismissible = false;
                 closeApiSettingsButton.style.display = 'none';
                 pageBlurOverlay.classList.add('active');
@@ -1036,7 +1125,6 @@
 
             function makeModalDismissibleAndOptional() {
                 settingsModalTitle.textContent = "API Settings";
-                settingsModalSubtitle.textContent = "Configure the API endpoint and optional API Key.";
                 settingsModalInstance.options.dismissible = true;
                 closeApiSettingsButton.style.display = 'inline-block';
                 pageBlurOverlay.classList.remove('active');
@@ -1044,11 +1132,32 @@
             }
             
             saveApiSettingsButton.addEventListener('click', async () => {
+                // --- Gather All Input Values ---
                 const baseUrl = apiBaseUrlInput.value.trim();
                 const chatPath = apiChatPathInput.value.trim();
                 const key = apiKeyInput.value.trim() || null;
-                // Model will be determined after fetching and from dropdown
+                const newRawDelimiter = rawOutputDelimiterInput.value; // User types '\n', JS sees it as a literal newline if not escaped. If they type '\\n', JS sees '\\n'. Let's assume they type \n for newline.
+                const newJsonSchema = jsonOutputSchemaInput.value.trim();
 
+                // --- Validate Output Format Settings ---
+                if (!newJsonSchema) {
+                    apiConnectionStatus.textContent = 'JSON Output Schema template cannot be empty.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    jsonOutputSchemaInput.focus();
+                    M.textareaAutoResize(jsonOutputSchemaInput); // Trigger resize
+                    return;
+                }
+                // Basic check: a schema should generally start with { or [
+                if (!newJsonSchema.startsWith('{') && !newJsonSchema.startsWith('[')) {
+                    apiConnectionStatus.textContent = 'JSON Schema should be a valid JSON structure (e.g., start with { or [ ).';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    jsonOutputSchemaInput.focus();
+                    M.textareaAutoResize(jsonOutputSchemaInput);
+                    return;
+                }
+                // The rawOutputDelimiter can be empty, that's fine (means outputs joined directly).
+
+                // --- API Settings Validation (existing logic) ---
                 if (!baseUrl) {
                     apiConnectionStatus.textContent = 'Base Server URL cannot be empty.';
                     apiConnectionStatus.className = 'caption red-text text-darken-1';
@@ -1069,18 +1178,18 @@
 
                 if (fetchedModels && fetchedModels.length > 0) {
                     availableModels = fetchedModels;
-                    // If user selected a model in dropdown, use that, otherwise try currentSelectedModel or first from list
-                    let modelToSave = apiModelSelect.value; 
+                    let modelToSave = apiModelSelect.value;
                     if (!modelToSave || !fetchedModels.includes(modelToSave)) {
                         modelToSave = fetchedModels.includes(currentSelectedModel) ? currentSelectedModel : fetchedModels[0];
                     }
-                    populateModelsDropdown(availableModels, modelToSave); // Update dropdown with new models and selection
-                     
+                    populateModelsDropdown(availableModels, modelToSave);
+
                     apiConnectionStatus.textContent = 'Saving: Testing chat connection...';
                     const fullChatEndpoint = baseUrl.replace(/\/$/, '') + chatPath;
                     const connectionUsable = await testApiConnection(fullChatEndpoint, modelToSave, false, key);
 
                     if (connectionUsable) {
+                        // API settings are good, NOW save everything
                         localStorage.setItem(BASE_SERVER_URL_KEY, baseUrl);
                         localStorage.setItem(CHAT_COMPLETION_PATH_KEY, chatPath);
                         localStorage.setItem(SELECTED_MODEL_KEY, modelToSave);
@@ -1088,17 +1197,23 @@
                         currentChatPath = chatPath;
                         currentSelectedModel = modelToSave;
 
-                        if (key) { localStorage.setItem(API_KEY_KEY, key); } 
+                        if (key) { localStorage.setItem(API_KEY_KEY, key); }
                         else { localStorage.removeItem(API_KEY_KEY); }
                         currentApiKey = key;
 
-                        logToConsole(`API Settings updated. Base: ${baseUrl}, Path: ${chatPath}, Model: ${modelToSave}, Key: ${key ? 'Provided' : 'Not Provided'}`, 'success');
+                        // Save Output Format Settings
+                        localStorage.setItem(RAW_DELIMITER_KEY, newRawDelimiter); // Store as user typed it e.g. "\n\n"
+                        localStorage.setItem(JSON_SCHEMA_KEY, newJsonSchema);
+                        currentRawDelimiter = newRawDelimiter;
+                        currentJsonSchema = newJsonSchema;
+
+                        logToConsole(`API & Output Settings updated. Delimiter: [${currentRawDelimiter.replace(/\n/g, "\\n").replace(/\t/g, "\\t")}], Model: ${modelToSave}`, 'success');
                         makeModalDismissibleAndOptional();
                         if (settingsModalInstance.isOpen) settingsModalInstance.close();
                     } else {
                         // testApiConnection already updated apiConnectionStatus
                         logToConsole(`Chat endpoint test failed. Settings not saved.`, 'error');
-                        settingsModalInstance.options.dismissible = false; 
+                        settingsModalInstance.options.dismissible = false;
                         closeApiSettingsButton.style.display = 'none';
                         pageBlurOverlay.classList.add('active');
                         if (!settingsModalInstance.isOpen) settingsModalInstance.open();
@@ -1106,8 +1221,8 @@
                 } else {
                     // fetchModels already updated apiConnectionStatus and logged error
                     logToConsole(`Failed to fetch models. API settings not saved.`, 'error');
-                    populateModelsDropdown(null, null); // Show error in dropdown
-                    settingsModalInstance.options.dismissible = false; 
+                    populateModelsDropdown(null, null);
+                    settingsModalInstance.options.dismissible = false;
                     closeApiSettingsButton.style.display = 'none';
                     pageBlurOverlay.classList.add('active');
                     if (!settingsModalInstance.isOpen) settingsModalInstance.open();
@@ -1389,39 +1504,31 @@
 
                 // Helper to manage button state and tooltip
                 function configureButton(button, isDisabled, enabledTooltipText, disabledTooltipText) {
+                    if (!button) return; // Safety check
+
+                    const newTooltipText = isDisabled ? disabledTooltipText : enabledTooltipText;
+
+                    // 1. Destroy existing tooltip instance, if any
+                    const existingTooltipInstance = M.Tooltip.getInstance(button);
+                    if (existingTooltipInstance) {
+                        existingTooltipInstance.destroy();
+                    }
+
+                    // 2. Set the new data-tooltip attribute
+                    button.setAttribute('data-tooltip', newTooltipText);
+
+                    // 3. Re-initialize the tooltip on the button
+                    M.Tooltip.init(button);
+
+                    // 4. Set disabled state
                     if (isDisabled) {
                         button.classList.add('disabled');
-                        button.setAttribute('disabled', ''); // Add the [disabled] attribute
+                        button.setAttribute('disabled', '');
                         button.setAttribute('aria-disabled', 'true');
                     } else {
                         button.classList.remove('disabled');
-                        button.removeAttribute('disabled'); // Remove the [disabled] attribute
+                        button.removeAttribute('disabled');
                         button.setAttribute('aria-disabled', 'false');
-                    }
-
-                    const tooltipInstance = M.Tooltip.getInstance(button);
-                    const newTooltipText = isDisabled ? disabledTooltipText : enabledTooltipText;
-
-                    if (tooltipInstance) {
-                        // If tooltipEl exists, update its content directly
-                        if (tooltipInstance.tooltipEl) {
-                            tooltipInstance.tooltipEl.textContent = newTooltipText;
-                        } else {
-                            // If tooltipEl doesn't exist yet (tooltip never shown),
-                            // update data-tooltip attribute. Materialize will pick it up on next show.
-                            // This might also require re-initialization if it's already been shown once
-                            // and then hidden, and Materialize caches the old text.
-                            // For robustness if the above doesn't always work:
-                            // tooltipInstance.destroy();
-                            // button.setAttribute('data-tooltip', newTooltipText);
-                            // M.Tooltip.init(button);
-                            // However, try the simpler attribute update first.
-                            button.setAttribute('data-tooltip', newTooltipText);
-                        }
-                    } else {
-                        // If no instance, it might need initialization (shouldn't happen if init globally)
-                        button.setAttribute('data-tooltip', newTooltipText);
-                        M.Tooltip.init(button); // Or ensure it's part of a global M.Tooltip.init
                     }
                 }
 
@@ -1678,34 +1785,124 @@
                 });
             }
 
-            function getExportableOutputs() {
+            function getExportableItemsDetails() {
                 return imageQueue
                     .filter(item => item.status === 'Completed' && item.output && typeof item.output === 'string' && item.output.trim() !== '')
-                    .map(item => item.output.trim()); // Get trimmed outputs
+                    .map((item, index) => ({ // The original index from filter is not used for 1-based display index
+                        id: item.id, // Keep id if needed for other purposes
+                        output: item.output.trim(),
+                        displayTitle: item.displayTitle,
+                        // Note: The 'index' in the object for formatOutputsJson will be 1-based.
+                    }));
+            }
+
+            function getProcessedDelimiter() {
+                if (typeof currentRawDelimiter !== 'string') return '\n\n'; // Fallback
+                return currentRawDelimiter.replace(/\\n/g, '\n').replace(/\\t/g, '\t');
             }
 
             function formatOutputsRaw(outputs) {
                 if (!outputs || outputs.length === 0) return "";
-                // Join with two newlines, no trailing newlines will be added by join itself.
-                return outputs.join('\n\n');
+                const delimiter = getProcessedDelimiter();
+                return outputs.join(delimiter);
             }
 
-            function formatOutputsJson(outputs) {
-                if (!outputs || outputs.length === 0) {
-                    return JSON.stringify({ Prompts: {} }, null, 2); // Empty but valid JSON
+            function formatOutputsJson(detailedItems) { // Expects an array of objects: [{output, displayTitle, id (optional)}, ...]
+                if (!detailedItems || detailedItems.length === 0) {
+                    // Attempt to render the schema with empty placeholders
+                    let emptySchema = currentJsonSchema;
+                    emptySchema = emptySchema.replace(/"?\{\{outputs_map_indexed\}\}"?/g, ''); // Empty content for maps
+                    emptySchema = emptySchema.replace(/"?\{\{outputs_map_titled\}\}"?/g, '');   // Empty content for maps
+                    emptySchema = emptySchema.replace(/"?\{\{outputs_array_detailed\}\}"?/g, ''); // Empty content for arrays
+                    emptySchema = emptySchema.replace(/"?\{\{timestamp\}\}"?/g, `"${new Date().toISOString()}"`);
+
+                    // Clean up potential trailing/leading commas if placeholders were structural
+                    emptySchema = emptySchema.replace(/,\s*([}\]])/g, '$1'); // Remove comma before closing bracket/brace
+                    emptySchema = emptySchema.replace(/([{\[])\s*,/g, '$1'); // Remove comma after opening bracket/brace
+
+
+                    try {
+                        // Attempt to parse to ensure it's valid JSON, then re-stringify prettily
+                        return JSON.stringify(JSON.parse(emptySchema), null, 2);
+                    } catch (e) {
+                        logToConsole(`Error parsing user JSON schema (even with empty data): ${e.message.substring(0,100)}. Schema: ${emptySchema.substring(0,100)}`, 'error');
+                        return JSON.stringify({ "Prompts": {}, "error": "Schema parsing failed with no data" }, null, 2);
+                    }
                 }
-                const promptsObject = {};
-                outputs.forEach((output, index) => {
-                    promptsObject[String(index + 1)] = output; // 1-based indexing
-                });
-                return JSON.stringify({ Prompts: promptsObject }, null, 2); // Pretty print with 2-space indent
+
+                let schemaToProcess = currentJsonSchema;
+
+                // 1. Prepare `{{outputs_map_indexed}}` replacement
+                //    e.g., "1": "output1", "2": "output2"
+                if (schemaToProcess.includes('{{outputs_map_indexed}}')) {
+                    const mapIndexedItems = detailedItems.map((item, index) => {
+                        const key = JSON.stringify(String(index + 1)); // Ensures key is a JSON string: "1"
+                        const value = JSON.stringify(String(item.output));   // Ensures value is a JSON string: "output text"
+                        return `${key}: ${value}`;
+                    });
+                    const mapIndexedString = mapIndexedItems.join(',\n            '); // Indent for prettiness
+                    schemaToProcess = schemaToProcess.replace(/"?\{\{outputs_map_indexed\}\}"?/g, mapIndexedString);
+                }
+
+                // 2. Prepare `{{outputs_map_titled}}` replacement
+                //    e.g., "CoolImage": "output1", "AnotherOne": "output2"
+                if (schemaToProcess.includes('{{outputs_map_titled}}')) {
+                    const mapTitledItems = detailedItems.map(item => {
+                        const key = JSON.stringify(String(item.displayTitle));
+                        const value = JSON.stringify(String(item.output));
+                        return `${key}: ${value}`;
+                    });
+                    const mapTitledString = mapTitledItems.join(',\n            ');
+                    schemaToProcess = schemaToProcess.replace(/"?\{\{outputs_map_titled\}\}"?/g, mapTitledString);
+                }
+
+                // 3. Prepare `{{outputs_array_detailed}}` replacement
+                //    e.g., {"index":1, "output":"out1", "displayTitle":"Title1"}, {"index":2, ...}
+                if (schemaToProcess.includes('{{outputs_array_detailed}}')) {
+                    const arrayDetailedItems = detailedItems.map((item, index) => {
+                        const detail = {
+                            index: index + 1,
+                            output: String(item.output),
+                            displayTitle: String(item.displayTitle)
+                            // you could add item.id here too if useful: id: item.id
+                        };
+                        return JSON.stringify(detail); // Stringify each object
+                    });
+                    const arrayDetailedString = arrayDetailedItems.join(',\n            ');
+                    schemaToProcess = schemaToProcess.replace(/"?\{\{outputs_array_detailed\}\}"?/g, arrayDetailedString);
+                }
+                
+                // 4. Replace `{{timestamp}}`
+                schemaToProcess = schemaToProcess.replace(/"?\{\{timestamp\}\}"?/g, `"${new Date().toISOString()}"`);
+
+                // Clean up potential trailing/leading commas if placeholders left them (e.g. if a placeholder was the only item)
+                // This is a bit naive and might need refinement based on how users construct schemas.
+                schemaToProcess = schemaToProcess.replace(/,\s*([}\]])/g, '$1'); // Remove comma before closing bracket/brace
+                schemaToProcess = schemaToProcess.replace(/([{\[])\s*,/g, '$1'); // Remove comma after opening bracket/brace
+
+
+                // Attempt to parse the final string as JSON and then re-stringify for pretty printing & validation
+                try {
+                    const finalJson = JSON.parse(schemaToProcess);
+                    return JSON.stringify(finalJson, null, 2);
+                } catch (e) {
+                    logToConsole(`Error parsing user-defined JSON schema after replacements: ${e.message.substring(0,150)}. Schema was: ${schemaToProcess.substring(0, 250)}...`, 'error');
+                    // Fallback to a simple array of outputs if user schema fails catastrophically
+                    const fallbackArray = detailedItems.map((item, index) => ({
+                        index: index + 1,
+                        output: item.output,
+                        displayTitle: item.displayTitle,
+                        error_details: "User-defined JSON schema failed to parse. See console log for attempted schema."
+                    }));
+                    return JSON.stringify(fallbackArray, null, 2);
+                }
             }
 
             function handleCopyExport(format) {
-                const outputs = getExportableOutputs();
-                if (outputs.length === 0) {
-                    logToConsole('No completed outputs available to copy.', 'warning');
-                    M.toast({html: 'No completed outputs to copy!'});
+                const exportableItems = getExportableItemsDetails();
+                if (exportableItems.length === 0) {
+                    logToConsole('No completed prompts available to copy.', 'warning');
+                    M.toast({html: 'No completed prompts to copy!'});
                     return;
                 }
 
@@ -1713,10 +1910,13 @@
                 let typeForLog;
 
                 if (format === 'raw') {
-                    contentToCopy = formatOutputsRaw(outputs);
+                    // formatOutputsRaw expects an array of strings (the outputs themselves)
+                    const rawOutputsOnly = exportableItems.map(item => item.output);
+                    contentToCopy = formatOutputsRaw(rawOutputsOnly);
                     typeForLog = "RAW text";
                 } else if (format === 'json') {
-                    contentToCopy = formatOutputsJson(outputs);
+                    // formatOutputsJson expects the array of detailed items
+                    contentToCopy = formatOutputsJson(exportableItems);
                     typeForLog = "JSON";
                 } else {
                     logToConsole(`Invalid export format for copy: ${format}`, 'error');
@@ -1724,7 +1924,7 @@
                 }
 
                 if (contentToCopy) {
-                    copyToClipboard(contentToCopy, `${outputs.length} output(s) copied as ${typeForLog}.`);
+                    copyToClipboard(contentToCopy, `${exportableItems.length} prompt(s) copied as ${typeForLog}.`);
                 } else {
                     // This case should ideally not be hit if outputs.length > 0
                     logToConsole(`No content generated for ${typeForLog} copy.`, 'warning');
@@ -1733,10 +1933,10 @@
             }
 
             function handleDownloadExport(format) {
-                const outputs = getExportableOutputs();
-                if (outputs.length === 0) {
-                    logToConsole('No completed outputs available to download.', 'warning');
-                    M.toast({html: 'No completed outputs to download!'});
+                const exportableItems = getExportableItemsDetails();
+                if (exportableItems.length === 0) {
+                    logToConsole('No completed prompts available to download.', 'warning');
+                    M.toast({html: 'No completed prompts to download!'});
                     return;
                 }
 
@@ -1749,12 +1949,13 @@
                 const timestamp = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2,'0')}${date.getDate().toString().padStart(2,'0')}_${date.getHours().toString().padStart(2,'0')}${date.getMinutes().toString().padStart(2,'0')}${date.getSeconds().toString().padStart(2,'0')}`;
 
                 if (format === 'raw') {
-                    fileContent = formatOutputsRaw(outputs);
+                    const rawOutputsOnly = exportableItems.map(item => item.output);
+                    fileContent = formatOutputsRaw(rawOutputsOnly);
                     fileName = `BiCaption_exports_${timestamp}.txt`;
                     mimeType = 'text/plain;charset=utf-8';
                     typeForLog = "RAW text";
                 } else if (format === 'json') {
-                    fileContent = formatOutputsJson(outputs);
+                    fileContent = formatOutputsJson(exportableItems);
                     fileName = `BiCaption_exports_${timestamp}.json`;
                     mimeType = 'application/json;charset=utf-8';
                     typeForLog = "JSON";
@@ -1773,7 +1974,7 @@
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
-                    logToConsole(`${outputs.length} output(s) downloaded as ${typeForLog} to ${fileName}.`, 'success');
+                    logToConsole(`${exportableItems.length} prompt(s) downloaded as ${typeForLog} to ${fileName}.`, 'success');
                 } else {
                     // This case should ideally not be hit if outputs.length > 0
                     logToConsole(`No content generated for ${typeForLog} download.`, 'warning');
