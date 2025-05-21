@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.1a">
+    <meta name="app-version" content="1.0.1b">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Image Captioner</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -371,6 +371,17 @@
         cursor: not-allowed;
         box-shadow: none !important;
         opacity: 0.65;
+    }
+
+    /* Tabs */
+    .tabs .tab a:focus,
+    .tabs .tab a:focus.active {
+        background-color: transparent !important;
+        outline: none !important;
+    }
+    .tabs .tab a:hover,
+    .tabs .tab a.active {
+        background-color: transparent !important;
     }
 
     /* Paste Area */
@@ -1463,6 +1474,98 @@
                     }
                 }
                 logToConsole('No image found in clipboard.', 'warning');
+            });
+
+            // --- Global Paste Handler (Ctrl+V / Cmd+V) ---
+            document.addEventListener('paste', async function(event) {
+                const target = event.target;
+
+                // 1. If the paste is happening directly into an input, textarea,
+                //    or the dedicated pasteArea, let the default/specific behavior handle it.
+                if (target.tagName === 'INPUT' || 
+                    target.tagName === 'TEXTAREA' || 
+                    target.isContentEditable || // Catches contenteditable elements
+                    target.id === 'pasteArea') { // Specifically for your paste area
+                    return; // Do nothing, let the existing handler or default behavior work
+                }
+
+                const items = event.clipboardData?.items;
+                if (!items) {
+                    return; // No clipboard items
+                }
+
+                let hasPastedImage = false;
+                const tabsInstance = M.Tabs.getInstance(document.querySelector('.tabs'));
+
+                // 2. Prioritize pasting an image
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.type.includes('image')) {
+                        event.preventDefault(); // Prevent default paste action (e.g., browser trying to display image)
+                        const file = item.getAsFile();
+                        if (file) {
+                            // Switch to the "Paste" tab
+                            if (tabsInstance) {
+                                tabsInstance.select('pasteTab');
+                            }
+                            
+                            addImageToQueue(file, 'paste-global-shortcut'); // Use your existing function
+                            logToConsole('Image pasted from clipboard via global shortcut.', 'info');
+                            hasPastedImage = true;
+                        }
+                        break; // Process the first image found and stop
+                    }
+                }
+
+                if (hasPastedImage) {
+                    return; // If an image was successfully pasted, we're done.
+                }
+
+                // 3. If no image was pasted, check for a URL in text/plain data
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    if (item.type === 'text/plain') {
+                        // item.getAsString() is asynchronous, so we need to handle its callback
+                        // We wrap it in a Promise to use await for cleaner code
+                        const text = await new Promise(resolve => item.getAsString(resolve));
+                        
+                        if (text) {
+                            const trimmedText = text.trim();
+                            // Basic URL validation: starts with http:// or https:// and is a valid URL structure
+                            if ((trimmedText.startsWith('http://') || trimmedText.startsWith('https://'))) {
+                                try {
+                                    new URL(trimmedText); // This will throw an error if the URL is malformed
+
+                                    event.preventDefault(); // Prevent default paste action
+
+                                    // Switch to the "From URL" tab
+                                    if (tabsInstance) {
+                                        tabsInstance.select('urlTab');
+                                    }
+
+                                    imageUrlInput.value = trimmedText;
+                                    
+                                    // Ensure the Materialize label for the URL input updates correctly
+                                    const labelForUrlInput = document.querySelector('label[for="imageUrlInput"]');
+                                    if (labelForUrlInput) {
+                                        labelForUrlInput.classList.add('active');
+                                    }
+                                    // M.updateTextFields(); // If you were using this elsewhere, but direct label manipulation is fine
+
+                                    logToConsole(`URL pasted into field via global shortcut: ${trimmedText.substring(0,50)}...`, 'info');
+                                    
+                                    // Optionally, focus the input field so the user can see it and press "Add"
+                                    imageUrlInput.focus();
+
+                                } catch (e) {
+                                    // The text was not a valid URL, so do nothing with it here.
+                                    // console.warn("Pasted text looked like a URL but was invalid:", trimmedText, e);
+                                }
+                            }
+                        }
+                        break; // Process the first text/plain item found and stop
+                    }
+                }
             });
 
             // --- Queue Processing Logic ---
