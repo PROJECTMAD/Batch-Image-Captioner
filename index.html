@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.0b">
+    <meta name="app-version" content="1.0.1a">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Image Captioner</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -362,11 +362,15 @@
         cursor: not-allowed;
         box-shadow: none !important;
     }
+    .btn-large {
+        padding: 0 12px;
+    }
     body.dark-theme .btn:disabled, body.dark-theme .btn-large:disabled, body.dark-theme .btn-floating:disabled {
         background-color: var(--btn-disabled-bg) !important;
         color: var(--btn-disabled-text) !important;
         cursor: not-allowed;
         box-shadow: none !important;
+        opacity: 0.65;
     }
 
     /* Paste Area */
@@ -391,6 +395,21 @@
         font-weight: 500; padding: 0 16px; line-height:48px;
         color: var(--sidenav-text-color);
         border-bottom: 1px solid var(--sidenav-border-color);
+    }
+    #imageQueueSidenav .subheader > div:last-child {
+        pointer-events: auto;
+    }
+    #imageQueueSidenav .subheader .dropdown-trigger:not(.disabled):not([disabled]) {
+        pointer-events: auto;
+        cursor: pointer;
+    }
+    #imageQueueSidenav .subheader .dropdown-trigger.disabled,
+    #imageQueueSidenav .subheader .dropdown-trigger[disabled] {
+        background-color: var(--btn-disabled-bg) !important;
+        color: var(--btn-disabled-text) !important;
+        cursor: not-allowed !important;
+        pointer-events: none !important;
+        opacity: 0.65;
     }
     #imageQueueSidenav .divider { margin: 0; background-color: var(--sidenav-border-color); } /* Thinner divider */
     #emptyQueueMessageSidenav { padding: 16px; color: var(--muted-text-color); text-align: center; }
@@ -534,7 +553,7 @@
                         </div>
                         <div id="uploadTab" class="col s12" style="padding-top: 20px;">
                             <div class="file-field input-field">
-                                <div class="btn"><span>Files</span><input type="file" id="imageUpload" accept="image/*" multiple></div>
+                                <div class="btn" style="margin-top:12px;"><span>Files</span><input type="file" id="imageUpload" accept="image/*" multiple></div>
                                 <div class="file-path-wrapper"><input class="file-path validate" type="text" placeholder="Upload one or more images"></div>
                             </div>
                         </div>
@@ -582,7 +601,24 @@
     </main>
 
     <ul id="imageQueueSidenav" class="sidenav"> <!-- Materialize 'sidenav' class for JS control -->
-        <li><div class="subheader">Image Queue (<span id="queueCountSidenav">0</span>)</div></li>
+        <li>
+            <div class="subheader" style="display: flex; justify-content: space-between; align-items: center; padding-right: 8px;">
+                <span>Image Queue (<span id="queueCountSidenav">0</span>)</span>
+                <div>
+                    <a class="waves-effect waves-light btn-small tooltipped dropdown-trigger blue-grey lighten-1" href="#!" data-target="copyOptionsDropdown" id="copyAllOutputsButton" data-position="bottom" data-tooltip="Copy All Outputs" disabled><i class="material-icons left" style="margin-right: 4px;">content_copy</i>Copy</a>
+                    <ul id="copyOptionsDropdown" class="dropdown-content">
+                        <li><a href="#!" data-format="raw">RAW</a></li>
+                        <li><a href="#!" data-format="json">JSON</a></li>
+                    </ul>
+
+                    <a class="waves-effect waves-light btn-small tooltipped dropdown-trigger blue-grey lighten-1" href="#!" data-target="downloadOptionsDropdown" id="downloadAllOutputsButton" data-position="bottom" data-tooltip="Download All Outputs" style="margin-left: 5px;" disabled><i class="material-icons left" style="margin-right: 4px;">file_download</i>Download</a>
+                    <ul id="downloadOptionsDropdown" class="dropdown-content">
+                        <li><a href="#!" data-format="raw">RAW</a></li>
+                        <li><a href="#!" data-format="json">JSON</a></li>
+                    </ul>
+                </div>
+            </div>
+        </li>
         <li><div class="divider"></div></li>
         <div id="imageQueueAreaSidenav">
             <p id="emptyQueueMessageSidenav">Load images to see them here.</p>
@@ -593,10 +629,21 @@
     <div id="settingsModal" class="modal">
         <div class="modal-content">
             <h4 id="settingsModalTitle">API Settings</h4>
-            <p id="settingsModalSubtitle">Configure the API endpoint and optional API Key.</p>
+            <p id="settingsModalSubtitle">Configure the API server, paths, model, and optional API Key.</p>
             <div class="input-field">
-                <input id="apiEndpointInput" type="url" value="http://localhost:6969/v1/chat/completions">
-                <label for="apiEndpointInput">API Endpoint URL</label>
+                <input id="apiBaseUrlInput" type="url" value="http://localhost:6969">
+                <label for="apiBaseUrlInput">Base Server URL (e.g., http://localhost:6969)</label>
+            </div>
+            <div class="input-field">
+                <input id="apiChatPathInput" type="text" value="/v1/chat/completions">
+                <label for="apiChatPathInput">Chat Completion Path (e.g., /v1/chat/completions)</label>
+            </div>
+            <div class="input-field">
+                <select id="apiModelSelect">
+                    <option value="" disabled selected>Loading models...</option>
+                    <!-- Models will be populated here by JS -->
+                </select>
+                <label for="apiModelSelect">Model</label>
             </div>
             <div class="input-field">
                 <input id="apiKeyInput" type="password">
@@ -617,16 +664,23 @@
         const APP_VERSION = document.querySelector('meta[name="app-version"]').getAttribute('content');
         document.querySelector('nav .brand-logo.center').textContent = `${APP_TITLE} v${APP_VERSION}`;
 
-        const API_ENDPOINT_KEY = 'batchCaptionApiEndpoint';
-        const API_KEY_KEY = 'batchCaptionApiKey';
-        const THEME_KEY = 'batchCaptionTheme';
-        const SIDENAV_PERSISTENT_KEY = 'batchCaptionSidenavPersistent';
+        const BASE_SERVER_URL_KEY = 'BiCaption_baseServerUrl';
+        const CHAT_COMPLETION_PATH_KEY = 'BiCaption_chatCompletionPath';
+        const SELECTED_MODEL_KEY = 'BiCaption_selectedModel';
+        const API_KEY_KEY = 'BiCaption_apiKey';
+        const THEME_KEY = 'BiCaption_theme';
+        const SIDENAV_PERSISTENT_KEY = 'BiCaption_sidenavPersistent';
 
 
         document.addEventListener('DOMContentLoaded', function() {
             // Initialize Materialize Components
             M.Tabs.init(document.querySelector('.tabs'));
-            M.Tooltip.init(document.querySelectorAll('.tooltipped')); // Initialize any static tooltips
+            M.Tooltip.init(document.querySelectorAll('.tooltipped'));
+            M.FormSelect.init(document.getElementById('apiModelSelect'));
+            M.Dropdown.init(document.querySelectorAll('.dropdown-trigger'), {
+                constrainWidth: false, // Allows dropdown to be wider than button
+                coverTrigger: false // Dropdown appears below trigger
+            });
 
             const sidenavElem = document.getElementById('imageQueueSidenav');
             const sidenavInstance = M.Sidenav.init(sidenavElem); // Initialize Materialize Sidenav
@@ -642,9 +696,11 @@
             // --- API Settings Modal ---
             const settingsModalElement = document.getElementById('settingsModal');
             const settingsModalInstance = M.Modal.init(settingsModalElement, {
-                // onOpenEnd: () => { if (pageBlurOverlay.classList.contains('active')) apiEndpointInput.focus(); } // Removed to simplify
+                // onOpenEnd: () => { if (pageBlurOverlay.classList.contains('active')) apiBaseUrlInput.focus(); }
             });
-            const apiEndpointInput = document.getElementById('apiEndpointInput');
+            const apiBaseUrlInput = document.getElementById('apiBaseUrlInput');
+            const apiChatPathInput = document.getElementById('apiChatPathInput');
+            const apiModelSelect = document.getElementById('apiModelSelect');
             const apiKeyInput = document.getElementById('apiKeyInput');
             const saveApiSettingsButton = document.getElementById('saveApiSettingsButton');
             const testApiSettingsButton = document.getElementById('testApiSettingsButton');
@@ -653,8 +709,11 @@
             const settingsModalTitle = document.getElementById('settingsModalTitle');
             const settingsModalSubtitle = document.getElementById('settingsModalSubtitle');
             
-            let currentApiEndpoint = localStorage.getItem(API_ENDPOINT_KEY) || 'http://localhost:6969/v1/chat/completions';
+            let currentBaseUrl = localStorage.getItem(BASE_SERVER_URL_KEY) || 'http://localhost:6969';
+            let currentChatPath = localStorage.getItem(CHAT_COMPLETION_PATH_KEY) || '/v1/chat/completions';
+            let currentSelectedModel = localStorage.getItem(SELECTED_MODEL_KEY) || 'llama-joycaption-beta-one-hf-llava-mmproj';
             let currentApiKey = localStorage.getItem(API_KEY_KEY) || null;
+            let availableModels = []; // To store fetched models
 
 
             // --- Theme Switcher ---
@@ -683,6 +742,8 @@
 
 
             // --- Core App Variables (Queue, Processing State) ---
+            const copyAllOutputsButton = document.getElementById('copyAllOutputsButton');
+            const downloadAllOutputsButton = document.getElementById('downloadAllOutputsButton');
             const imageUploadInput = document.getElementById('imageUpload');
             const imageUrlInput = document.getElementById('imageUrlInput');
             const addImageFromUrlButton = document.getElementById('addImageFromUrlButton');
@@ -693,7 +754,7 @@
             
             const imageQueueAreaSidenav = document.getElementById('imageQueueAreaSidenav');
             const emptyQueueMessageSidenav = document.getElementById('emptyQueueMessageSidenav');
-            const queueCountSidenavSpan = document.querySelector('#imageQueueSidenav .subheader span');
+            const queueCountSidenavSpan = document.getElementById('queueCountSidenav');
 
             const consoleLogDiv = document.getElementById('consoleLog');
             const consoleMessagesDiv = document.getElementById('consoleMessages');
@@ -774,9 +835,9 @@
 
                 if (promptType === 'sd') {
                     const forbiddenSubstrings = [
-                        'artist signature', 'watermark', 'logo', 'artist name', 
+                        'artist', 'watermark', 'logo', 'artist name', 
                         'signed by', 'artist mark', 'brand logo', 'company logo', 'text overlay',
-                        'user signature', 'author signature', 'username'
+                        'user', 'author', 'username', 'signature', 'artist\'s', 'author\'s', 'user\'s', 'username\'s'
                     ];
                     let phrases = filteredText.split(',').map(phrase => phrase.trim());
                     
@@ -812,25 +873,115 @@
                 return filteredText;
             }
 
-            // --- API Modal Functions ---
-            async function testApiConnection(url, silent = false, apiKey = null) {
-                let uiShouldBeUnlocked = false;
-                if (!silent) {
-                    apiConnectionStatus.textContent = 'Testing connection...';
-                    apiConnectionStatus.className = 'caption grey-text text-darken-1'; // Neutral testing
+            async function fetchModels(baseUrl, apiKey = null) {
+                if (!baseUrl) {
+                    logToConsole('Base URL is required to fetch models.', 'warning');
+                    apiConnectionStatus.textContent = 'Base URL is required.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    return null;
                 }
+                const modelsUrl = baseUrl.replace(/\/$/, '') + '/v1/models'; // Ensure no double slash
+                logToConsole(`Fetching models from ${modelsUrl}...`, 'info');
+                if (apiConnectionStatus) { // Check if element exists, e.g. during initial headless tests
+                    apiConnectionStatus.textContent = 'Fetching available models...';
+                    apiConnectionStatus.className = 'caption grey-text text-darken-1';
+                }
+
                 try {
                     const headers = { 'Content-Type': 'application/json' };
                     if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; }
 
-                    const testPayload = { model: "test-model", messages: [{role:"user", content:"ping"}], max_tokens: 1, stream: false };
-                    const response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(testPayload), signal: AbortSignal.timeout(7000) }); // 7s timeout
+                    const response = await fetch(modelsUrl, { method: 'GET', headers: headers, signal: AbortSignal.timeout(7000) });
+
+                    if (!response.ok) {
+                        const errorText = await response.text().catch(() => `Server returned status ${response.status}`);
+                        throw new Error(`Failed to fetch models: ${response.status} ${errorText.substring(0,100)}`);
+                    }
+                    const data = await response.json();
+                    if (data && data.data && Array.isArray(data.data)) {
+                        const modelIds = data.data.map(model => model.id).filter(id => id);
+                        logToConsole(`Successfully fetched ${modelIds.length} models.`, 'success');
+                        if (apiConnectionStatus) {
+                            apiConnectionStatus.textContent = `Successfully fetched ${modelIds.length} models.`;
+                            apiConnectionStatus.className = 'caption green-text text-darken-1';
+                        }
+                        return modelIds;
+                    } else {
+                        throw new Error('Invalid model data format received.');
+                    }
+                } catch (error) {
+                    logToConsole(`Error fetching models: ${error.message}`, 'error');
+                    if (apiConnectionStatus) {
+                        apiConnectionStatus.textContent = `Error fetching models: ${error.message.substring(0,150)}`;
+                        apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    }
+                    console.error("Fetch Models Error:", error);
+                    return null; // Indicate failure
+                }
+            }
+
+            function populateModelsDropdown(models, selectedModelId) {
+                apiModelSelect.innerHTML = ''; // Clear existing options
+
+                if (!models || models.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = "";
+                    option.textContent = "No models found or error";
+                    option.disabled = true;
+                    option.selected = true;
+                    apiModelSelect.appendChild(option);
+                } else {
+                    let foundSelected = false;
+                    models.forEach(modelId => {
+                        const option = document.createElement('option');
+                        option.value = modelId;
+                        option.textContent = modelId;
+                        if (modelId === selectedModelId) {
+                            option.selected = true;
+                            foundSelected = true;
+                        }
+                        apiModelSelect.appendChild(option);
+                    });
+                    if (!foundSelected && models.length > 0) {
+                        apiModelSelect.value = models[0]; // Select the first model if preferred one wasn't found
+                    }
+                }
+                // Re-initialize Materialize select
+                M.FormSelect.init(apiModelSelect);
+            }
+
+            // --- API Modal Functions ---
+            async function testApiConnection(chatEndpointUrl, modelId, silent = false, apiKey = null) {
+                let uiShouldBeUnlocked = false; // Renamed for clarity in this context
+                if (!silent) {
+                    apiConnectionStatus.textContent = 'Testing chat connection...';
+                    apiConnectionStatus.className = 'caption grey-text text-darken-1'; 
+                }
+
+                if (!modelId && !silent) {
+                    apiConnectionStatus.textContent = 'No model selected/available for testing chat endpoint.';
+                    apiConnectionStatus.className = 'caption orange-text text-darken-1';
+                    return false; 
+                }
+                if (!chatEndpointUrl && !silent) {
+                    apiConnectionStatus.textContent = 'Chat endpoint URL is missing for test.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    return false;
+                }
+
+
+                try {
+                    const headers = { 'Content-Type': 'application/json' };
+                    if (apiKey) { headers['Authorization'] = `Bearer ${apiKey}`; }
+
+                    const testPayload = { model: modelId || "test-model", messages: [{role:"user", content:"ping"}], max_tokens: 1, stream: false };
+                    const response = await fetch(chatEndpointUrl, { method: 'POST', headers: headers, body: JSON.stringify(testPayload), signal: AbortSignal.timeout(7000) }); 
                     
                     const status = response.status;
                     let feedbackMessage = ''; let feedbackClass = 'caption red-text text-darken-1';
 
                     if ((status >= 200 && status < 300)) {
-                        feedbackMessage = 'Connection successful! (2xx)'; feedbackClass = 'caption green-text text-darken-1'; uiShouldBeUnlocked = true;
+                        feedbackMessage = `Chat Connection successful! (Model: ${modelId}, Status: ${status})`; feedbackClass = 'caption green-text text-darken-1'; uiShouldBeUnlocked = true;
                     } else if (status === 400 || status === 422) {
                         feedbackMessage = `Bad request (model/params). Status: ${status}. API is responding.`; feedbackClass = 'caption orange-text text-darken-1'; uiShouldBeUnlocked = true;
                     } else if (status === 404) {
@@ -839,15 +990,15 @@
                         feedbackMessage = `Authentication error (401). Check API Key.`;
                     } else if (status === 403) {
                         feedbackMessage = `Forbidden (403). Check API Key permissions.`;
-                    } else { // Other errors (5xx, etc.)
+                    } else { 
                         const errorText = await response.text().catch(() => `Server returned status ${status}`);
                         feedbackMessage = `Server error or unexpected issue. Status: ${status}. Message: ${errorText.substring(0,100)}`;
                     }
                     if (!silent) { apiConnectionStatus.textContent = feedbackMessage; apiConnectionStatus.className = feedbackClass; }
                     return uiShouldBeUnlocked;
-                } catch (error) { // Network error, timeout, CORS preflight failure
+                } catch (error) { 
                     if (!silent) {
-                        let errorMessage = `Connection failed: ${error.message.substring(0,150)}`;
+                        let errorMessage = `Chat Connection failed: ${error.message.substring(0,150)}`;
                         if (error.name === 'AbortError') errorMessage = 'Connection timed out.';
                         else if (error instanceof TypeError && error.message.toLowerCase().includes('failed to fetch')) {
                              errorMessage = 'Network error or CORS issue. Check console & server CORS headers.';
@@ -855,7 +1006,7 @@
                         apiConnectionStatus.textContent = errorMessage;
                         apiConnectionStatus.className = 'caption red-text text-darken-1';
                     }
-                    console.error("API Connection Test Error:", error);
+                    console.error("API Chat Connection Test Error:", error);
                     return false;
                 }
             }
@@ -869,7 +1020,7 @@
                 if (!settingsModalInstance.isOpen) {
                     settingsModalInstance.open();
                 }
-                setTimeout(() => { if (document.activeElement !== apiEndpointInput) apiEndpointInput.focus(); }, 200);
+                setTimeout(() => { if (document.activeElement !== apiBaseUrlInput) apiBaseUrlInput.focus(); }, 200);
             }
 
             function makeModalDismissibleAndOptional() {
@@ -882,59 +1033,161 @@
             }
             
             saveApiSettingsButton.addEventListener('click', async () => {
-                const url = apiEndpointInput.value.trim();
+                const baseUrl = apiBaseUrlInput.value.trim();
+                const chatPath = apiChatPathInput.value.trim();
                 const key = apiKeyInput.value.trim() || null;
-                if (!url) {
-                    apiConnectionStatus.textContent = 'API Endpoint URL cannot be empty.';
+                // Model will be determined after fetching and from dropdown
+
+                if (!baseUrl) {
+                    apiConnectionStatus.textContent = 'Base Server URL cannot be empty.';
                     apiConnectionStatus.className = 'caption red-text text-darken-1';
-                    apiEndpointInput.focus();
+                    apiBaseUrlInput.focus();
                     return;
                 }
-                apiConnectionStatus.textContent = 'Saving and testing...'; // Indicate activity
+                if (!chatPath) {
+                    apiConnectionStatus.textContent = 'Chat Completion Path cannot be empty.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    apiChatPathInput.focus();
+                    return;
+                }
+
+                apiConnectionStatus.textContent = 'Saving: Fetching models...';
                 apiConnectionStatus.className = 'caption grey-text text-darken-1';
 
-                const connectionUsable = await testApiConnection(url, false, key);
-                if (connectionUsable) {
-                    localStorage.setItem(API_ENDPOINT_KEY, url);
-                    currentApiEndpoint = url;
-                    if (key) { localStorage.setItem(API_KEY_KEY, key); } 
-                    else { localStorage.removeItem(API_KEY_KEY); }
-                    currentApiKey = key;
+                const fetchedModels = await fetchModels(baseUrl, key);
 
-                    logToConsole(`API Settings updated. Endpoint: ${url}, Key: ${key ? 'Provided' : 'Not Provided'}`, 'success');
-                    makeModalDismissibleAndOptional();
-                    if (settingsModalInstance.isOpen) settingsModalInstance.close();
+                if (fetchedModels && fetchedModels.length > 0) {
+                    availableModels = fetchedModels;
+                    // If user selected a model in dropdown, use that, otherwise try currentSelectedModel or first from list
+                    let modelToSave = apiModelSelect.value; 
+                    if (!modelToSave || !fetchedModels.includes(modelToSave)) {
+                        modelToSave = fetchedModels.includes(currentSelectedModel) ? currentSelectedModel : fetchedModels[0];
+                    }
+                    populateModelsDropdown(availableModels, modelToSave); // Update dropdown with new models and selection
+                     
+                    apiConnectionStatus.textContent = 'Saving: Testing chat connection...';
+                    const fullChatEndpoint = baseUrl.replace(/\/$/, '') + chatPath;
+                    const connectionUsable = await testApiConnection(fullChatEndpoint, modelToSave, false, key);
+
+                    if (connectionUsable) {
+                        localStorage.setItem(BASE_SERVER_URL_KEY, baseUrl);
+                        localStorage.setItem(CHAT_COMPLETION_PATH_KEY, chatPath);
+                        localStorage.setItem(SELECTED_MODEL_KEY, modelToSave);
+                        currentBaseUrl = baseUrl;
+                        currentChatPath = chatPath;
+                        currentSelectedModel = modelToSave;
+
+                        if (key) { localStorage.setItem(API_KEY_KEY, key); } 
+                        else { localStorage.removeItem(API_KEY_KEY); }
+                        currentApiKey = key;
+
+                        logToConsole(`API Settings updated. Base: ${baseUrl}, Path: ${chatPath}, Model: ${modelToSave}, Key: ${key ? 'Provided' : 'Not Provided'}`, 'success');
+                        makeModalDismissibleAndOptional();
+                        if (settingsModalInstance.isOpen) settingsModalInstance.close();
+                    } else {
+                        // testApiConnection already updated apiConnectionStatus
+                        logToConsole(`Chat endpoint test failed. Settings not saved.`, 'error');
+                        settingsModalInstance.options.dismissible = false; 
+                        closeApiSettingsButton.style.display = 'none';
+                        pageBlurOverlay.classList.add('active');
+                        if (!settingsModalInstance.isOpen) settingsModalInstance.open();
+                    }
                 } else {
-                    // testApiConnection already updated apiConnectionStatus with the error.
-                    logToConsole(`Failed to establish a usable connection with new API Settings.`, 'error');
-                    // Ensure modal stays forced open
+                    // fetchModels already updated apiConnectionStatus and logged error
+                    logToConsole(`Failed to fetch models. API settings not saved.`, 'error');
+                    populateModelsDropdown(null, null); // Show error in dropdown
                     settingsModalInstance.options.dismissible = false; 
                     closeApiSettingsButton.style.display = 'none';
-                    pageBlurOverlay.classList.add('active'); // Ensure blur is active
-                    if (!settingsModalInstance.isOpen) settingsModalInstance.open(); // Reopen if somehow closed
-                    apiEndpointInput.focus();
+                    pageBlurOverlay.classList.add('active');
+                    if (!settingsModalInstance.isOpen) settingsModalInstance.open();
+                    apiBaseUrlInput.focus();
                 }
             });
             
-            testApiSettingsButton.addEventListener('click', () => {
-                testApiConnection(apiEndpointInput.value.trim(), false, (apiKeyInput.value.trim() || null));
+            testApiSettingsButton.addEventListener('click', async () => {
+                const baseUrl = apiBaseUrlInput.value.trim();
+                const chatPath = apiChatPathInput.value.trim();
+                const key = apiKeyInput.value.trim() || null;
+                const modelFromDropdown = apiModelSelect.value;
+
+                if (!baseUrl) {
+                    apiConnectionStatus.textContent = 'Base URL is required for testing.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    return;
+                }
+                 if (!chatPath) {
+                    apiConnectionStatus.textContent = 'Chat Path is required for testing.';
+                    apiConnectionStatus.className = 'caption red-text text-darken-1';
+                    return;
+                }
+
+                apiConnectionStatus.textContent = 'Testing: Fetching models...';
+                apiConnectionStatus.className = 'caption grey-text text-darken-1';
+                const fetchedModels = await fetchModels(baseUrl, key);
+
+                if (fetchedModels && fetchedModels.length > 0) {
+                    // Populate dropdown, try to keep current selection or pick first
+                    const modelToTestWith = fetchedModels.includes(modelFromDropdown) ? modelFromDropdown : fetchedModels[0];
+                    populateModelsDropdown(fetchedModels, modelToTestWith); 
+                    
+                    if (!modelToTestWith) { // Should not happen if fetchedModels is not empty
+                         apiConnectionStatus.textContent = 'No model available in dropdown for chat test.';
+                         apiConnectionStatus.className = 'caption orange-text text-darken-1';
+                         return;
+                    }
+                    
+                    const fullChatEndpoint = baseUrl.replace(/\/$/, '') + chatPath;
+                    // testApiConnection will update the status message for chat test
+                    await testApiConnection(fullChatEndpoint, modelToTestWith, false, key);
+                } else {
+                    // fetchModels already updated status.
+                    populateModelsDropdown(null, null); // Show error in dropdown
+                }
             });
 
             // Initial API setup check
-            apiEndpointInput.value = currentApiEndpoint; // Populate from localStorage or default
-            if(currentApiKey) apiKeyInput.value = currentApiKey;
+            apiBaseUrlInput.value = currentBaseUrl;
+            apiChatPathInput.value = currentChatPath;
+            // Model dropdown will be populated by initialApiSetup
+            if (currentApiKey) apiKeyInput.value = currentApiKey;
 
-            if (localStorage.getItem(API_ENDPOINT_KEY)) { // Only test if an endpoint was previously saved
-                testApiConnection(currentApiEndpoint, true, currentApiKey).then(isUsableConnection => {
-                    if(isUsableConnection){
-                        makeModalDismissibleAndOptional();
-                    } else {
-                        openForceConfigModal('Previous API configuration is no longer usable or could not be verified. Please reconfigure.');
+            async function initialApiSetup() {
+                logToConsole("Performing initial API setup check...", "info");
+                const models = await fetchModels(currentBaseUrl, currentApiKey);
+                
+                if (models && models.length > 0) {
+                    availableModels = models;
+                    // Ensure currentSelectedModel is valid, otherwise pick first or default (e.g. hardcoded preferred)
+                    if (!availableModels.includes(currentSelectedModel)) {
+                        const defaultPreferredModel = 'llama-joycaption-beta-one-hf-llava-mmproj';
+                        currentSelectedModel = availableModels.includes(defaultPreferredModel) ? defaultPreferredModel : availableModels[0];
+                        // Optionally update localStorage if currentSelectedModel was invalid and changed
+                        // localStorage.setItem(SELECTED_MODEL_KEY, currentSelectedModel); 
                     }
-                });
-            } else { 
-                openForceConfigModal('API Endpoint not configured. Please set it to begin.');
+                    populateModelsDropdown(availableModels, currentSelectedModel);
+                    apiModelSelect.value = currentSelectedModel; // Ensure dropdown reflects this
+                    M.FormSelect.init(apiModelSelect); // Re-init after setting value
+
+                    const fullChatEndpoint = currentBaseUrl.replace(/\/$/, '') + currentChatPath;
+                    const isUsableChatConnection = await testApiConnection(fullChatEndpoint, currentSelectedModel, true, currentApiKey);
+                    
+                    if (isUsableChatConnection) {
+                        makeModalDismissibleAndOptional();
+                        logToConsole("API settings loaded and connection verified.", "success");
+                    } else {
+                        // Models fetched, but chat test failed
+                        openForceConfigModal('Fetched models, but chat endpoint test failed. Please verify paths/model or reconfigure.');
+                    }
+                } else {
+                    // Failed to fetch models
+                    populateModelsDropdown(null, null); // Show error in dropdown
+                    const message = localStorage.getItem(BASE_SERVER_URL_KEY) ? 
+                                    'Could not fetch models with stored settings. Please reconfigure.' : 
+                                    'API not configured. Please set server URL and test to begin.';
+                    openForceConfigModal(message);
+                }
             }
+            initialApiSetup(); // Call the setup function
 
             // --- Sidenav Layout & Control ---
             function updateSidenavLayout() {
@@ -1094,7 +1347,12 @@
                 const pendingItemsCount = imageQueue.filter(item => item.status === 'Pending').length;
                 const isApiReady = settingsModalInstance.options.dismissible;
 
-                queueCountSidenavSpan.textContent = imageQueue.length;
+                if (queueCountSidenavSpan) { // Check if the element exists
+                    queueCountSidenavSpan.textContent = imageQueue.length;
+                } else {
+                    console.error("queueCountSidenavSpan not found!"); // Log error if it's missing
+                }
+                
                 processQueueButton.disabled = !isApiReady || isProcessing || pendingItemsCount === 0;
                 clearQueueButton.disabled = isProcessing || imageQueue.length === 0;
 
@@ -1108,7 +1366,69 @@
                     processQueueButton.innerHTML = `Process Queue ${imageQueue.length > 0 ? '('+pendingItemsCount+')' : ''} <i class="material-icons right">playlist_play</i>`;
                 }
                 
-                if (imageQueue.length === 0) emptyQueueMessageSidenav.style.display = 'block';
+                if (imageQueue.length === 0) {
+                    if (emptyQueueMessageSidenav) emptyQueueMessageSidenav.style.display = 'block';
+                } else {
+                    if (emptyQueueMessageSidenav) emptyQueueMessageSidenav.style.display = 'none';
+                }
+
+                // --- Export Buttons Logic ---
+                const completedItemsCount = imageQueue.filter(item => item.status === 'Completed' && item.output && item.output.trim() !== '').length;
+                const shouldBeDisabled = completedItemsCount === 0 || isProcessing;
+
+                // Helper to manage button state and tooltip
+                function configureButton(button, isDisabled, enabledTooltipText, disabledTooltipText) {
+                    if (isDisabled) {
+                        button.classList.add('disabled');
+                        button.setAttribute('disabled', ''); // Add the [disabled] attribute
+                        button.setAttribute('aria-disabled', 'true');
+                    } else {
+                        button.classList.remove('disabled');
+                        button.removeAttribute('disabled'); // Remove the [disabled] attribute
+                        button.setAttribute('aria-disabled', 'false');
+                    }
+
+                    const tooltipInstance = M.Tooltip.getInstance(button);
+                    const newTooltipText = isDisabled ? disabledTooltipText : enabledTooltipText;
+
+                    if (tooltipInstance) {
+                        // If tooltipEl exists, update its content directly
+                        if (tooltipInstance.tooltipEl) {
+                            tooltipInstance.tooltipEl.textContent = newTooltipText;
+                        } else {
+                            // If tooltipEl doesn't exist yet (tooltip never shown),
+                            // update data-tooltip attribute. Materialize will pick it up on next show.
+                            // This might also require re-initialization if it's already been shown once
+                            // and then hidden, and Materialize caches the old text.
+                            // For robustness if the above doesn't always work:
+                            // tooltipInstance.destroy();
+                            // button.setAttribute('data-tooltip', newTooltipText);
+                            // M.Tooltip.init(button);
+                            // However, try the simpler attribute update first.
+                            button.setAttribute('data-tooltip', newTooltipText);
+                        }
+                    } else {
+                        // If no instance, it might need initialization (shouldn't happen if init globally)
+                        button.setAttribute('data-tooltip', newTooltipText);
+                        M.Tooltip.init(button); // Or ensure it's part of a global M.Tooltip.init
+                    }
+                }
+
+                // For Copy Button
+                configureButton(
+                    copyAllOutputsButton,
+                    shouldBeDisabled,
+                    "Copy All Outputs",
+                    "Nothing to copy or processing"
+                );
+
+                // For Download Button
+                configureButton(
+                    downloadAllOutputsButton,
+                    shouldBeDisabled,
+                    "Download All Outputs",
+                    "Nothing to download or processing"
+                );
             }
 
             // --- Event Listeners for Image Input ---
@@ -1182,12 +1502,13 @@
                     updateQueueItemUI(item);
                     
                     const itemStartTime = performance.now();
-                    const payload = { model: "llama-joycaption-beta-one-hf-llava-mmproj", messages: [{ role: "system", content: "You are a helpful image captioner." },{ role: "user", content: [{ type: "text", text: promptTxt },{ type: "image_url", image_url: { url: item.base64Image } }] }], temperature: 0.6, max_tokens: 512, stream: true };
+                    const payload = { model: currentSelectedModel, messages: [{ role: "system", content: "You are a helpful image captioner." },{ role: "user", content: [{ type: "text", text: promptTxt },{ type: "image_url", image_url: { url: item.base64Image } }] }], temperature: 0.6, max_tokens: 512, stream: true };
                     const fetchHeaders = { 'Content-Type': 'application/json' };
                     if (currentApiKey) fetchHeaders['Authorization'] = `Bearer ${currentApiKey}`;
                     
                     try {
-                        const r = await fetch(currentApiEndpoint, { method: 'POST', headers: fetchHeaders, body: JSON.stringify(payload) });
+                        const fullChatEndpointForProcessing = currentBaseUrl.replace(/\/$/, '') + currentChatPath;
+                        const r = await fetch(fullChatEndpointForProcessing, { method: 'POST', headers: fetchHeaders, body: JSON.stringify(payload) });
                         if (!r.ok) { const ed = await r.json().catch(()=>({detail:`API Error ${r.status}`})); throw new Error(`${ed.detail || `HTTP ${r.status}`}`);}
                         if (!r.body) throw new Error("Response has no body (stream)."); 
                         const rd = r.body.getReader(); const dec = new TextDecoder();
@@ -1223,6 +1544,28 @@
                      logToConsole(`Queue processing finished! ${processedCount}/${toProcess.length} processed. ${overallSuccess ? '' : 'Some errors.'}`, overallSuccess ? 'success' : 'warning', (performance.now() - totalQueueStartTime) / 1000);
                 }
             });
+
+            document.getElementById('copyOptionsDropdown').addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent default link behavior
+                const target = event.target.closest('a'); // Handle clicks on <a> or its children
+                if (target && target.dataset.format) {
+                    handleCopyExport(target.dataset.format);
+                    // Optional: Close dropdown after click. Materialize might do this by default.
+                    const instance = M.Dropdown.getInstance(copyAllOutputsButton);
+                    if (instance) instance.close();
+                }
+            });
+
+            document.getElementById('downloadOptionsDropdown').addEventListener('click', function(event) {
+                event.preventDefault(); // Prevent default link behavior
+                const target = event.target.closest('a');
+                if (target && target.dataset.format) {
+                    handleDownloadExport(target.dataset.format);
+                    // Optional: Close dropdown
+                    const instance = M.Dropdown.getInstance(downloadAllOutputsButton);
+                    if (instance) instance.close();
+                }
+            });
             
             function copyToClipboard(text, message = 'Copied!') {
                 navigator.clipboard.writeText(text).then(() => logToConsole(message, 'success'))
@@ -1230,6 +1573,109 @@
                     console.error('Clipboard copy failed: ', err);
                     logToConsole('Failed to copy. Check browser permissions or console.', 'error');
                 });
+            }
+
+            function getExportableOutputs() {
+                return imageQueue
+                    .filter(item => item.status === 'Completed' && item.output && typeof item.output === 'string' && item.output.trim() !== '')
+                    .map(item => item.output.trim()); // Get trimmed outputs
+            }
+
+            function formatOutputsRaw(outputs) {
+                if (!outputs || outputs.length === 0) return "";
+                // Join with two newlines, no trailing newlines will be added by join itself.
+                return outputs.join('\n\n');
+            }
+
+            function formatOutputsJson(outputs) {
+                if (!outputs || outputs.length === 0) {
+                    return JSON.stringify({ Prompts: {} }, null, 2); // Empty but valid JSON
+                }
+                const promptsObject = {};
+                outputs.forEach((output, index) => {
+                    promptsObject[String(index + 1)] = output; // 1-based indexing
+                });
+                return JSON.stringify({ Prompts: promptsObject }, null, 2); // Pretty print with 2-space indent
+            }
+
+            function handleCopyExport(format) {
+                const outputs = getExportableOutputs();
+                if (outputs.length === 0) {
+                    logToConsole('No completed outputs available to copy.', 'warning');
+                    M.toast({html: 'No completed outputs to copy!'});
+                    return;
+                }
+
+                let contentToCopy;
+                let typeForLog;
+
+                if (format === 'raw') {
+                    contentToCopy = formatOutputsRaw(outputs);
+                    typeForLog = "RAW text";
+                } else if (format === 'json') {
+                    contentToCopy = formatOutputsJson(outputs);
+                    typeForLog = "JSON";
+                } else {
+                    logToConsole(`Invalid export format for copy: ${format}`, 'error');
+                    return;
+                }
+
+                if (contentToCopy) {
+                    copyToClipboard(contentToCopy, `${outputs.length} output(s) copied as ${typeForLog}.`);
+                } else {
+                    // This case should ideally not be hit if outputs.length > 0
+                    logToConsole(`No content generated for ${typeForLog} copy.`, 'warning');
+                    M.toast({html: 'Nothing to copy!'});
+                }
+            }
+
+            function handleDownloadExport(format) {
+                const outputs = getExportableOutputs();
+                if (outputs.length === 0) {
+                    logToConsole('No completed outputs available to download.', 'warning');
+                    M.toast({html: 'No completed outputs to download!'});
+                    return;
+                }
+
+                let fileContent;
+                let fileName;
+                let mimeType;
+                let typeForLog;
+
+                const date = new Date();
+                const timestamp = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2,'0')}${date.getDate().toString().padStart(2,'0')}_${date.getHours().toString().padStart(2,'0')}${date.getMinutes().toString().padStart(2,'0')}${date.getSeconds().toString().padStart(2,'0')}`;
+
+                if (format === 'raw') {
+                    fileContent = formatOutputsRaw(outputs);
+                    fileName = `BiCaption_exports_${timestamp}.txt`;
+                    mimeType = 'text/plain;charset=utf-8';
+                    typeForLog = "RAW text";
+                } else if (format === 'json') {
+                    fileContent = formatOutputsJson(outputs);
+                    fileName = `BiCaption_exports_${timestamp}.json`;
+                    mimeType = 'application/json;charset=utf-8';
+                    typeForLog = "JSON";
+                } else {
+                    logToConsole(`Invalid export format for download: ${format}`, 'error');
+                    return;
+                }
+
+                if (fileContent) {
+                    const blob = new Blob([fileContent], { type: mimeType });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = fileName;
+                    document.body.appendChild(a); // Required for Firefox
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    logToConsole(`${outputs.length} output(s) downloaded as ${typeForLog} to ${fileName}.`, 'success');
+                } else {
+                    // This case should ideally not be hit if outputs.length > 0
+                    logToConsole(`No content generated for ${typeForLog} download.`, 'warning');
+                    M.toast({html: 'Nothing to download!'});
+                }
             }
 
             // Final UI update after all setup
