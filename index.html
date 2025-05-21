@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.1c">
+    <meta name="app-version" content="1.0.1d">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Image Captioner</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -543,27 +543,21 @@
     
     /* Materialize Tooltip Theming */
     .material-tooltip {
-        background-color: #343434; /* Or a specific tooltip background variable */
-        /* Or, if you only want the .tooltip-content to have a background: */
-        /* background-color: transparent !important; */
-        /* You might also want to adjust its padding if it's too much */
-        /* padding: 0; */ /* If you only want padding on .tooltip-content */
+        padding: 0;
+        background-color: transparent;
+        border-radius: 0;
     }
 
-    body.dark-theme .material-tooltip {
-        background-color: #000000; /* Use the same variable as above */
-        /* Or, for dark theme if you want it different and not transparent: */
-        /* background-color: #2a2a2a; */ /* Example: slightly different dark */
-    }
     .material-tooltip .tooltip-content {
-        background-color: #343434; /* Use the same variable as above */
+        background-color: #323232;
         color: #fff;
         font-size: 0.9rem;
         padding: 6px 10px;
-        border-radius: 2px; /* Match Materialize's default outer radius if desired */
+        border-radius: 2px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
     }
     body.dark-theme .material-tooltip .tooltip-content {
-        background-color: #000000; /* Use the same variable as above */
+        background-color: #424242;
         color: #e0e0e0;
     }
 
