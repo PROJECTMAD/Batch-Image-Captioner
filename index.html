@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="app-version" content="1.0.1d">
+    <meta name="app-version" content="1.0.1e">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Batch Image Captioner</title>
     <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
@@ -715,6 +715,7 @@
                         <span class="helper-text">
                             Available Placeholders:<br>
                             `{{timestamp}}` - ISO date string of export time.<br>
+                            `{{prompt_type}}` - The prompt type selected at export (e.g., "sd", "danbooru").<br>
                             `{{outputs_map_indexed}}` - Comma-separated key-values like "1":"output1", "2":"output2".<br>
                             `{{outputs_map_titled}}` - Comma-separated key-values like "ImgName1":"output1".<br>
                             `{{outputs_array_detailed}}` - Comma-separated JSON objects like {"index":1, "output":"out1", "displayTitle":"Title1"}.
@@ -747,6 +748,7 @@
         const DEFAULT_JSON_SCHEMA = `{
     "app_name": "${APP_TITLE}",
     "app_version": "${APP_VERSION}",
+    "prompt_type_used": "{{prompt_type}}",
     "export_timestamp": "{{timestamp}}",
     "caption_data_indexed": {
         {{outputs_map_indexed}}
@@ -773,7 +775,6 @@
             if (window.innerWidth < 993) { // Override for small screens
                 isSidenavPersistent = false;
             }
-
 
             // --- API Settings Modal ---
             const settingsModalElement = document.getElementById('settingsModal');
@@ -857,11 +858,28 @@
 
             let imageQueue = [];
             let isProcessing = false;
+            let isSingleItemProcessing = false;
 
             const NAME_PART_ADJECTIVES = ["Absurd", "Ancient", "Angry", "Awesome", "Awkward", "Bad", "Bald", "Big", "Bitter", "Blazing", "Blessed", "Blind", "Blue", "Bold", "Brave", "Brief", "Bright", "Broken", "Bumpy", "Calm", "Captain", "Charming", "Cheap", "Cheeky", "Clean", "Clumsy", "Cold", "Cool", "Cosmic", "Crazy", "Creepy", "Cruel", "Crying", "Cunning", "Curious", "Dapper", "Dark", "Deadly", "Deep", "Defiant", "Depressed", "Digital", "Dizzy", "Doctor", "Double", "Dramatic", "Dreamy", "Drunk", "Dusty", "Eager", "Early", "Easy", "Elder", "Electric", "Empty", "Evil", "Fake", "Fancy", "Fast", "Fat", "Final", "Flying", "Focused", "Forgotten", "Foxy", "Freezing", "Fresh", "Friendly", "Frozen", "Furious", "Fuzzy", "Gentle", "Ghost", "Giant", "Giga", "Gloomy", "Golden", "Good", "Grand", "Greedy", "Grim", "Grumpy", "Hairy", "Happy", "Haunted", "Heavy", "Hidden", "High", "Holy", "Honest", "Humble", "Hungry", "Hyper", "Icy", "Ideal", "Imperial", "Inner", "Iron", "Jolly", "Joyful", "Jumping", "Junior", "Keen", "Kind", "King", "Lazy", "Light", "Little", "Lone", "Long", "Lost", "Loud", "Lovely", "Lucky", "Mad", "Magic", "Major", "Mega", "Metal", "Mighty", "Mini", "Misty", "Modern", "Mutant", "Mystic", "Naked", "Nasty", "Naughty", "Nerdy", "New", "Noble", "Noisy", "Nuclear", "Odd", "Old", "Omega", "Only", "Orange", "Ordinary", "Outer", "Perfect", "Plain", "Plastic", "Polite", "Poor", "Powerful", "Pretty", "Prickly", "Prime", "Private", "Professor", "Proud", "Psycho", "Punchy", "Pure", "Purple", "Quick", "Quiet", "Rad", "Random", "Rapid", "Rebel", "Red", "Rich", "Risky", "Rock", "Rough", "Royal", "Rude", "Rusty", "Sad", "Salty", "Savage", "Scared", "Secret", "Serious", "Shadow", "Sharp", "Shiny", "Short", "Shy", "Silent", "Silly", "Silver", "Simple", "Sir", "Sleepy", "Slow", "Small", "Smart", "Smooth", "Sneaky", "Solid", "Sour", "Sparkly", "Special", "Spicy", "Spooky", "Steel", "Storm", "Strange", "Street", "Strong", "Stupid", "Super", "Sweet", "Swift", "Tall", "Ten", "Thin", "Thirsty", "Thunder", "Tiny", "Tired", "Top", "Total", "Tough", "Toxic", "True", "Twin", "Ultra", "Unholy", "Vain", "Vast", "Violent", "Void", "Wacky", "Warm", "Weak", "Weird", "Wet", "White", "Wicked", "Wide", "Wild", "Wise", "Wooden", "Young", "Yummy", "Zany", "Zombie", "Plump", "Leprechaun", "Depression", "Hooray"];
             const NAME_PART_NOUNS = ["Aardvark", "Abyss", "Agent", "Alien", "Alpaca", "Anarchy", "Angel", "Ant", "Anthem", "Anvil", "Apex", "Apple", "Archive", "Arena", "Armor", "Arrow", "Art", "Ash", "Attack", "Atom", "Aura", "Aurora", "Autumn", "Axe", "Bacon", "Badge", "Badger", "Baguette", "Banshee", "Baron", "Basilisk", "Bastion", "Bat", "Beacon", "Beard", "Beast", "Beauty", "Bed", "Bee", "Beer", "Beetle", "Bell", "Biscuit", "Blade", "Blast", "Blaze", "Blimp", "Bliss", "Blizzard", "Blob", "Block", "Blood", "Boar", "Boat", "Bomb", "Bone", "Bongo", "Book", "Boom", "Boot", "Boss", "Bottle", "Boulder", "Brain", "Branch", "Bread", "Breath", "Brick", "Bride", "Bridge", "Broccoli", "Bubble", "Bucket", "Buffalo", "Bug", "Bullet", "Bumble", "Bunker", "Burger", "Butter", "Button", "Cactus", "Cake", "Camel", "Candle", "Candy", "Cannon", "Canyon", "Cape", "Car", "Carpet", "Carrot", "Cash", "Castle", "Cat", "Cave", "Cell", "Centaur", "Chain", "Chair", "Chaos", "Charm", "Cheese", "Cherry", "Chicken", "Chief", "Child", "Chimera", "Chip", "Choir", "Chorus", "Cigar", "Cipher", "Circus", "Citizen", "Clam", "Claw", "Clay", "Clock", "Cloud", "Clown", "Cobra", "Code", "Coffee", "Coin", "Comet", "Cookie", "Copper", "Core", "Cosmos", "Couch", "Cow", "Coyote", "Crab", "Craft", "Crane", "Crash", "Crawler", "Cream", "Cricket", "Crime", "Crisis", "Crook", "Crow", "Crown", "Crux", "Crystal", "Cube", "Cult", "Cup", "Curse", "Cyborg", "Cyclone", "Czar", "Daemon", "Dagger", "Dance", "Dawn", "Day", "Death", "Decay", "Deer", "Demon", "Desert", "Design", "Desire", "Destiny", "Devil", "Dew", "Diamond", "Dice", "Digger", "Dilemma", "Dinosaur", "Disco", "Disease", "Disk", "Djinn", "Dock", "Dog", "Doll", "Dolphin", "Donkey", "Donut", "Doom", "Door", "Dragon", "Drake", "Dream", "Drill", "Drink", "Drone", "Drop", "Drug", "Drum", "Duck", "Duke", "Dune", "Dungeon", "Dust", "Dynamo", "Eagle", "Earth", "Echo", "Eclipse", "Eel", "Egg", "Ego", "Elf", "Elixir", "Ember", "Emblem", "Emperor", "Empire", "Engine", "Enigma", "Entity", "Epoch", "Error", "Essence", "Evening", "Event", "Exile", "Eye", "Fabric", "Face", "Fairy", "Falcon", "Fall", "Famine", "Fang", "Fantasy", "Farm", "Fate", "Father", "Fault", "Fear", "Feast", "Feather", "Fever", "Field", "Fiend", "Fig", "Fight", "Figure", "File", "Finger", "Fire", "Fish", "Fist", "Flag", "Flame", "Flask", "Flea", "Flesh", "Flint", "Flood", "Floor", "Flower", "Flute", "Flux", "Fly", "Foam", "Fog", "Folk", "Food", "Fool", "Foot", "Force", "Forest", "Forge", "Fork", "Form", "Fort", "Fossil", "Fox", "Fragment", "Frenzy", "Friend", "Frog", "Frost", "Fruit", "Fungus", "Fury", "Gadget", "Galaxy", "Gambit", "Game", "Gang", "Garden", "Garlic", "Gas", "Gate", "Gauntlet", "Gear", "Gecko", "Gem", "Genesis", "Genie", "Genius", "Ghost", "Ghoul", "Giant", "Gift", "Glacier", "Glade", "Glass", "Glaze", "Glitch", "Globe", "Gloom", "Glove", "Glow", "Glue", "Gnome", "Goat", "Goblin", "God", "Gold", "Golem", "Goose", "Gorge", "Gospel", "Grain", "Grape", "Grass", "Grave", "Greed", "Griffin", "Grimoire", "Grog", "Groom", "Grove", "Guard", "Guest", "Guide", "Guilt", "Guitar", "Gun", "Guru", "Gut", "Gym", "Gypsy", "Hacker", "Hail", "Hair", "Ham", "Hammer", "Hand", "Harbor", "Harmony", "Harp", "Harpy", "Hat", "Hate", "Hawk", "Haze", "Head", "Health", "Heart", "Heat", "Heaven", "Hedge", "Hell", "Helmet", "Herb", "Hermit", "Hero", "Hex", "Hive", "Hog", "Hole", "Holiday", "Home", "Honey", "Hood", "Hoof", "Hook", "Hope", "Horn", "Hornet", "Horror", "Horse", "Host", "Hound", "House", "Hulk", "Humor", "Hunt", "Hurricane", "Husk", "Hydra", "Hymn", "Ice", "Icon", "Idea", "Idol", "Illusion", "Image", "Impact", "Impulse", "Incense", "Inferno", "Ink", "Inn", "Insect", "Iron", "Island", "Issue", "Ivory", "Jackal", "Jacket", "Jade", "Jail", "Jam", "Jester", "Jet", "Jewel", "Joke", "Journey", "Joy", "Judge", "Juice", "Jungle", "Junk", "Jury", "Justice", "Karma", "Key", "Kid", "Kiln", "King", "Kiss", "Kitchen", "Kite", "Kitten", "Knife", "Knight", "Knot", "Kraken", "Label", "Labor", "Labyrinth", "Lace", "Ladder", "Lady", "Lagoon", "Lake", "Lamb", "Lament", "Lamp", "Lance", "Land", "Lantern", "Lark", "Larva", "Laser", "Lasso", "Lava", "Law", "Lead", "Leaf", "Leak", "Leech", "Legacy", "Legend", "Lemon", "Lens", "Leopard", "Leprechaun", "Lettuce", "Leviathan", "Liberty", "Librarian", "Library", "Lice", "Lich", "Lie", "Life", "Light", "Lightning", "Lily", "Lime", "Line", "Link", "Lion", "Lips", "Liquid", "Lizard", "Llama", "Loaf", "Loan", "Lobster", "Lock", "Locket", "Locust", "Log", "Logic", "Loom", "Loop", "Lord", "Lore", "Lotus", "Lounge", "Love", "Luck", "Lullaby", "Lumber", "Lump", "Lunch", "Lure", "Lust", "Lute", "Luxury", "Lyre", "Macaroni", "Machine", "Mage", "Magic", "Magma", "Magnet", "Maiden", "Mail", "Mammoth", "Man", "Mane", "Mantra", "Map", "Maple", "Marble", "March", "Mare", "Mark", "Market", "Mask", "Mass", "Master", "Match", "Matrix", "Matron", "Maze", "Meadow", "Meal", "Meat", "Medal", "Melody", "Melon", "Member", "Memory", "Menace", "Mentor", "Mercy", "Meridian", "Mesh", "Message", "Metal", "Meteor", "Microbe", "Milk", "Mill", "Mimic", "Mind", "Mine", "Mirage", "Mirror", "Mischief", "Missile", "Mist", "Mob", "Model", "Moloch", "Moment", "Monarch", "Money", "Monk", "Monkey", "Monster", "Moon", "Moose", "Morning", "Moss", "Moth", "Motion", "Motor", "Mountain", "Mouse", "Mouth", "Mud", "Muffin", "Mule", "Mummy", "Murder", "Muscle", "Museum", "Mushroom", "Music", "Musket", "Mutant", "Mutt", "Mystery", "Myth", "Nail", "Name", "Nation", "Nature", "Navy", "Nebula", "Neck", "Needle", "Nemesis", "Net", "Network", "Night", "Nimbus", "Ninja", "Nitro", "Noble", "Node", "Noise", "Nomad", "Noon", "Noodle", "North", "Nose", "Note", "Nothing", "Nova", "Novel", "Nuke", "Null", "Number", "Nut", "Nymph", "Oasis", "Oath", "Oatmeal", "Object", "Oblivion", "Obsidian", "Ocean", "Ochre", "Octagon", "Octopus", "Odor", "Odyssey", "Office", "Ogre", "Oil", "Ointment", "Omega", "Omen", "Onion", "Ooze", "Opal", "Opera", "Oracle", "Orb", "Orchard", "Orchestra", "Orc", "Order", "Organ", "Origin", "Ornament", "Orphan", "Ostrich", "Otter", "Outlet", "Outlaw", "Oven", "Overlord", "Owl", "Ox", "Oyster", "Package", "Pact", "Paddle", "Page", "Pain", "Paint", "Palace", "Palm", "Pancake", "Panda", "Panic", "Panther", "Pants", "Paper", "Parade", "Paradox", "Parasite", "Parchement", "Park", "Parrot", "Party", "Pasta", "Patch", "Path", "Patron", "Pawn", "Peace", "Peach", "Peacock", "Peanut", "Pear", "Pearl", "Peasant", "Pebble", "Pegasus", "Pelican", "Pen", "Pencil", "Pendant", "Pendulum", "Penguin", "Pepper", "Petal", "Phantom", "Phoenix", "Phone", "Photo", "Phrase", "Piano", "Pickle", "Pie", "Piece", "Pig", "Pigeon", "Pike", "Pilgrim", "Pill", "Pillar", "Pillow", "Pilot", "Pin", "Pine", "Pipe", "Pirate", "Piston", "Pit", "Pitch", "Pixel", "Pizza", "Plague", "Plain", "Plan", "Plane", "Planet", "Plank", "Plant", "Plasma", "Plate", "Platypus", "Player", "Plaza", "Plot", "Plume", "Pocket", "Poem", "Poet", "Point", "Poison", "Poker", "Pole", "Pollen", "Pond", "Pony", "Pool", "Popcorn", "Portal", "Portrait", "Post", "Potato", "Potion", "Powder", "Power", "Prayer", "Prey", "Price", "Pride", "Priest", "Prince", "Prism", "Prison", "Probe", "Problem", "Prodigy", "Program", "Project", "Prophet", "Proton", "Prowler", "Proxy", "Psalm", "Psyche", "Pudding", "Puddle", "Pulse", "Punch", "Punk", "Puppet", "Puppy", "Purge", "Pyramid", "Python", "Quake", "Quark", "Quarry", "Queen", "Quest", "Quill", "Rabbit", "Race", "Radish", "Rage", "Raider", "Rail", "Rain", "Rake", "Ram", "Rancor", "Ranger", "Rat", "Raven", "Ray", "Razor", "Realm", "Reaper", "Rebel", "Recipe", "Record", "Recruit", "Redeem", "Reef", "Reflex", "Refuge", "Relic", "Remedy", "Rent", "Reptile", "Requiem", "Reserve", "Resin", "Resort", "Rest", "Retreat", "Return", "Revelation", "Revenge", "Rhyme", "Rhythm", "Ribbon", "Rice", "Riddle", "Rider", "Rifle", "Rift", "Ring", "Riot", "Risk", "Rite", "Ritual", "River", "Road", "Roar", "Robe", "Robin", "Robot", "Rock", "Rocket", "Rod", "Rogue", "Roll", "Romance", "Roof", "Rook", "Room", "Root", "Rope", "Rose", "Rotor", "Round", "Route", "Ruby", "Ruin", "Ruler", "Rune", "Rust", "Saber", "Sack", "Sacrifice", "Sage", "Sail", "Salad", "Salamander", "Salt", "Salute", "Salvo", "Sanctum", "Sand", "Sarcasm", "Sauce", "Sausage", "Savage", "Savior", "Saw", "Scale", "Scarab", "Scarecrow", "Scarf", "Scent", "Scheme", "Scholar", "School", "Science", "Scimitar", "Scissors", "Scoop", "Scorpion", "Scout", "Scrap", "Scream", "Screen", "Screw", "Script", "Scroll", "Scythe", "Sea", "Seal", "Seam", "Search", "Season", "Seat", "Secret", "Sect", "Sector", "Seed", "Seer", "Seizure", "Senate", "Sense", "Sentinel", "Sentry", "Seraph", "Serenade", "Serpent", "Servant", "Server", "Shadow", "Shaft", "Shale", "Shaman", "Shame", "Shard", "Shark", "Shears", "Shed", "Sheep", "Shell", "Shelter", "Sheriff", "Shield", "Shift", "Shine", "Ship", "Shire", "Shock", "Shoe", "Shop", "Shore", "Shot", "Shovel", "Show", "Shred", "Shriek", "Shrine", "Shroud", "Sign", "Signal", "Silence", "Silk", "Silver", "Sin", "Singer", "Sire", "Siren", "Skeleton", "Skin", "Skull", "Sky", "Slab", "Slang", "Slave", "Sled", "Sleep", "Sleet", "Sleeve", "Slime", "Sling", "Slot", "Sloth", "Sludge", "Slug", "Smile", "Smoke", "Snake", "Snare", "Snow", "Soap", "Socket", "Soil", "Soldier", "Solitude", "Song", "Soot", "Sorcery", "Sorrow", "Soul", "Sound", "Soup", "South", "Space", "Spade", "Spam", "Spark", "Sparrow", "Spawn", "Spear", "Spell", "Sphere", "Spice", "Spider", "Spike", "Spin", "Spine", "Spiral", "Spire", "Spirit", "Spit", "Spite", "Spore", "Sport", "Spot", "Spring", "Sprite", "Spur", "Spy", "Squad", "Square", "Squash", "Squid", "Squirrel", "Staff", "Stage", "Stain", "Stair", "Stake", "Stall", "Stamp", "Stance", "Star", "Statue", "Steam", "Steel", "Stem", "Step", "Stew", "Stick", "Stigma", "Sting", "Stone", "Storm", "Story", "Stove", "Strain", "Strand", "Strap", "Stream", "Street", "Stress", "Strike", "String", "Strip", "Stroke", "Struggle", "Stub", "Student", "Study", "Stump", "Style", "Sugar", "Suit", "Sulfur", "Summer", "Sun", "Surge", "Swamp", "Swan", "Swarm", "Sweat", "Sweet", "Swift", "Swim", "Switch", "Sword", "Symbol", "Symphony", "Syndicate", "Synergy", "Synod", "Syrup", "System", "Tablet", "Tackle", "Taco", "Tact", "Tactic", "Tail", "Tale", "Talisman", "Talk", "Tank", "Tape", "Target", "Tarot", "Task", "Taste", "Tattoo", "Tavern", "Tea", "Tear", "Techno", "Temple", "Tempt", "Tent", "Terror", "Test", "Text", "Theft", "Theme", "Theory", "Thief", "Thistle", "Thorn", "Thought", "Thread", "Threat", "Throne", "Thumb", "Thunder", "Thyme", "Ticket", "Tide", "Tiger", "Tile", "Time", "Tin", "Tip", "Titan", "Toast", "Tobacco", "Token", "Tomb", "Tone", "Tongue", "Tool", "Tooth", "Topaz", "Torch", "Tornado", "Torrent", "Tortoise", "Totem", "Touch", "Tour", "Tower", "Town", "Toxin", "Toy", "Trace", "Track", "Trade", "Tragedy", "Trail", "Train", "Trait", "Traitor", "Trance", "Trap", "Trash", "Travel", "Treason", "Treasure", "Treaty", "Tree", "Trench", "Trend", "Trial", "Triangle", "Tribe", "Trick", "Trident", "Trigger", "Trinity", "Trinket", "Trip", "Triumph", "Troll", "Troop", "Trophy", "Trouble", "Trout", "Truck", "Trumpet", "Trunk", "Trust", "Truth", "Try", "Tube", "Tundra", "Tune", "Tunnel", "Turban", "Turf", "Turkey", "Turtle", "Tusk", "Tutor", "Twig", "Twilight", "Twin", "Twist", "Tycoon", "Tyrant", "Udon", "Ulcer", "Umbra", "Umbrella", "Undead", "Underdog", "Unicorn", "Uniform", "Union", "Unit", "Universe", "Uprising", "Urchin", "Urn", "Vacuum", "Vagrant", "Vale", "Valley", "Valor", "Valve", "Vampire", "Vandal", "Vanilla", "Vapor", "Vault", "Veil", "Vein", "Velvet", "Venom", "Vent", "Venue", "Verdict", "Verse", "Vessel", "Vest", "Veteran", "Vial", "Vibe", "Vice", "Victim", "Victor", "Video", "View", "Vigil", "Viking", "Village", "Vine", "Vinegar", "Violation", "Violence", "Violet", "Viper", "Virtue", "Virus", "Visage", "Vision", "Visitor", "Vista", "Voice", "Void", "Volcano", "Volt", "Volume", "Vortex", "Vote", "Vow", "Vowel", "Voyage", "Vulture", "Waffle", "Wagon", "Waist", "Walk", "Wall", "Walnut", "Walrus", "Waltz", "Wand", "War", "Warden", "Wardrobe", "Warlock", "Warmth", "Warning", "Warp", "Warrior", "Wasp", "Waste", "Watch", "Water", "Wave", "Wax", "Way", "Weapon", "Weasel", "Weather", "Web", "Weed", "Week", "Weight", "Well", "Whale", "Wheat", "Wheel", "Whip", "Whisper", "Whistle", "Wick", "Widow", "Wight", "Wilderness", "Will", "Willow", "Wind", "Window", "Wine", "Wing", "Winter", "Wire", "Wisdom", "Wish", "Wisp", "Witch", "Witness", "Wizard", "Woe", "Wolf", "Woman", "Wombat", "Wonder", "Wood", "Wool", "Word", "Work", "World", "Worm", "Worry", "Wound", "Wrath", "Wreck", "Wrench", "Writer", "Xenon", "Xylophone", "Yacht", "Yak", "Yam", "Yarn", "Year", "Yeast", "Yeti", "Yield", "Yoga", "Yogurt", "Yolk", "Youth", "Zealot", "Zebra", "Zenith", "Zephyr", "Zero", "Zeus", "Zigzag", "Zinc", "Zombie", "Zone", "Zoo", "Banana", "Pickle", "Robot", "Ninja", "Unicorn", "Pirate", "Muffin", "Gnome", "Dragon", "Alabama", "Penguin", "Potato", "Pancake"];
 
             // [Your NAME_PART_ADJECTIVES and NAME_PART_NOUNS arrays are assumed to be here in your local file]
+
+            promptForm.addEventListener('change', () => {
+                // When prompt type changes, update tooltips of all visible regenerate buttons
+                imageQueue.forEach(item => {
+                    if (item.status === 'Completed' || item.status === 'Error') {
+                        const itemDiv = document.getElementById(item.id);
+                        if (itemDiv) {
+                            const regenerateBtn = itemDiv.querySelector(`#regenerate-${item.id}`);
+                            if (regenerateBtn && regenerateBtn.style.display !== 'none') {
+                                // Re-call updateQueueItemUI for this item to refresh its tooltip and state
+                                updateQueueItemUI(item);
+                            }
+                        }
+                    }
+                });
+            });
 
             function logToConsole(message, type = 'info', durationSeconds = null) {
                 if (consoleLogDiv.style.display === 'none') {
@@ -1114,6 +1132,7 @@
                 if (!settingsModalInstance.isOpen) {
                     settingsModalInstance.open();
                 }
+                imageQueue.forEach(it => updateQueueItemUI(it));
                 setTimeout(() => { if (document.activeElement !== apiBaseUrlInput) apiBaseUrlInput.focus(); }, 200);
             }
 
@@ -1122,7 +1141,8 @@
                 settingsModalInstance.options.dismissible = true;
                 closeApiSettingsButton.style.display = 'inline-block';
                 pageBlurOverlay.classList.remove('active');
-                updateQueueControls(); 
+                updateQueueControls();
+                imageQueue.forEach(it => updateQueueItemUI(it));
             }
             
             saveApiSettingsButton.addEventListener('click', async () => {
@@ -1358,14 +1378,23 @@
                     const itemId = `img-${Date.now()}-${Math.random().toString(36).substring(2,9)}`;
                     const displayName = generateRandomName();
                     
-                    const queueItem = { id: itemId, base64Image, status: 'Pending', output: null, error: null, displayTitle: displayName, copied: false };
+                    const queueItem = {
+                        id: itemId,
+                        base64Image,
+                        status: 'Pending',
+                        output: null,
+                        error: null,
+                        displayTitle: displayName,
+                        copied: false,
+                        promptTypeUsed: null // Added this line
+                    };
                     imageQueue.push(queueItem);
                     renderQueueItem(queueItem); 
                     updateQueueControls();
                     logToConsole(`Image "${displayName}" added to queue from ${source}.`, 'success');
                     
                     if (window.innerWidth < 993 && !sidenavInstance.isOpen && !isSidenavPersistent) {
-                        sidenavInstance.open(); // Open overlay sidenav on small screens if an image is added
+                        sidenavInstance.open();
                     }
                 }
                 reader.readAsDataURL(file);
@@ -1386,14 +1415,16 @@
                     </div>
                     <div class="queue-item-actions">
                         <button id="copy-${item.id}" class="btn-floating btn-small waves-effect waves-light tooltipped" data-position="left" data-tooltip="Copy Output" style="display:none;margin-right:0.5rem;"><i class="material-icons">content_copy</i></button>
+                        <button id="regenerate-${item.id}" class="btn-floating btn-small waves-effect waves-light tooltipped" data-position="left" data-tooltip="Regenerate" style="display:none;margin-right:0.5rem;"><i class="material-icons">sync</i></button>
                         <button id="remove-${item.id}" class="btn-floating btn-small waves-effect waves-light red tooltipped" data-position="left" data-tooltip="Remove"><i class="material-icons">delete_outline</i></button>
                     </div>
                 `;
                 imageQueueAreaSidenav.appendChild(itemDiv);
-                M.Tooltip.init(itemDiv.querySelectorAll('.tooltipped')); // Init tooltips for new item
+                M.Tooltip.init(itemDiv.querySelectorAll('.tooltipped'));
 
                 itemDiv.querySelector(`#copy-${item.id}`).addEventListener('click', () => copyItemOutput(item));
                 itemDiv.querySelector(`#remove-${item.id}`).addEventListener('click', () => removeQueueItem(item.id));
+                itemDiv.querySelector(`#regenerate-${item.id}`).addEventListener('click', () => regenerateQueueItem(item.id));
             }
 
             function copyItemOutput(item) {
@@ -1431,35 +1462,192 @@
                 }
             }
 
-            function updateQueueItemUI(item) { 
+            async function regenerateQueueItem(itemId) {
+                if (isProcessing) {
+                    logToConsole('Cannot regenerate item: Main queue is processing.', 'warning');
+                    M.toast({ html: 'Main queue is processing!' });
+                    return;
+                }
+                if (isSingleItemProcessing) {
+                    logToConsole('Cannot regenerate item: Another item is already being regenerated.', 'warning');
+                    M.toast({ html: 'Another item is processing!' });
+                    return;
+                }
+                const isApiConfigured = settingsModalInstance.options.dismissible;
+                if (!isApiConfigured) {
+                    logToConsole('API not configured. Cannot regenerate.', 'warning');
+                    M.toast({ html: 'API not configured. Cannot regenerate.' });
+                    return;
+                }
+
+                const item = imageQueue.find(it => it.id === itemId);
+                if (!item) {
+                    logToConsole(`Item ${itemId} not found for regeneration.`, 'error');
+                    return;
+                }
+
+                if (item.status !== 'Completed' && item.status !== 'Error') {
+                    logToConsole(`Item "${item.displayTitle}" is not in a state that allows regeneration.`, 'warning');
+                    return;
+                }
+
+                isSingleItemProcessing = true;
+                item.status = 'Processing';
+                item.output = null;
+                item.error = null;
+                item.copied = false;
+                // item.promptTypeUsed will be set after successful processing
+                updateQueueItemUI(item); // Show "Processing" status, disable its own regenerate button
+                updateQueueControls();   // Disable global process button potentially
+
+                // Temporarily disable other regenerate buttons
+                imageQueue.forEach(iqItem => {
+                    if (iqItem.id !== item.id) updateQueueItemUI(iqItem);
+                });
+
+
+                const currentPromptType = promptForm.elements['promptType'].value;
+                const promptTxt = getPromptText();
+                logToConsole(`Regenerating "${item.displayTitle}" for ${currentPromptType}...`, 'info');
+                const itemStartTime = performance.now();
+
+                const payload = {
+                    model: currentSelectedModel,
+                    messages: [
+                        { role: "system", content: "You are a helpful image captioner." },
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: promptTxt },
+                                { type: "image_url", image_url: { url: item.base64Image } }
+                            ]
+                        }
+                    ],
+                    temperature: 0.6,
+                    max_tokens: 512,
+                    stream: true
+                };
+                const fetchHeaders = { 'Content-Type': 'application/json' };
+                if (currentApiKey) fetchHeaders['Authorization'] = `Bearer ${currentApiKey}`;
+
+                try {
+                    const fullChatEndpointForProcessing = currentBaseUrl.replace(/\/$/, '') + currentChatPath;
+                    const r = await fetch(fullChatEndpointForProcessing, { method: 'POST', headers: fetchHeaders, body: JSON.stringify(payload) });
+
+                    if (!r.ok) {
+                        const ed = await r.json().catch(() => ({ detail: `API Error ${r.status}` }));
+                        throw new Error(`${ed.detail || `HTTP ${r.status}`}`);
+                    }
+                    if (!r.body) throw new Error("Response has no body (stream).");
+
+                    const rd = r.body.getReader();
+                    const dec = new TextDecoder();
+                    let buf = '';
+                    let fullTxt = '';
+                    while (true) {
+                        const { done, value } = await rd.read();
+                        if (done) break;
+                        buf += dec.decode(value, { stream: true });
+                        let pos;
+                        while ((pos = buf.indexOf('\n\n')) >= 0) {
+                            const ln = buf.substring(0, pos).trim();
+                            buf = buf.substring(pos + 2);
+                            if (ln.startsWith('data: ')) {
+                                const jd = ln.substring(6);
+                                if (jd === '[DONE]') break;
+                                try {
+                                    const p = JSON.parse(jd);
+                                    if (p.choices?.[0]?.delta?.content) fullTxt += p.choices[0].delta.content;
+                                } catch (e) {
+                                    console.warn("Stream JSON chunk parse error:", e, jd);
+                                }
+                            }
+                        }
+                        if (buf.includes('data: [DONE]')) break;
+                    }
+                    item.output = filterApiResponse(fullTxt.trim(), currentPromptType);
+                    item.status = 'Completed';
+                    item.promptTypeUsed = currentPromptType;
+                    logToConsole(`Successfully regenerated "${item.displayTitle}".`, 'success', (performance.now() - itemStartTime) / 1000);
+                } catch (e) {
+                    item.status = 'Error';
+                    item.error = e.message;
+                    // item.promptTypeUsed remains what it was or null if first error
+                    logToConsole(`Error regenerating "${item.displayTitle}": ${e.message.substring(0, 150)}`, 'error', (performance.now() - itemStartTime) / 1000);
+                }
+
+                isSingleItemProcessing = false;
+                updateQueueItemUI(item); // Update the processed item
+                updateQueueControls();   // Re-enable global process button if needed
+
+                // Re-enable other regenerate buttons
+                imageQueue.forEach(iqItem => {
+                     updateQueueItemUI(iqItem);
+                });
+            }
+
+            function updateQueueItemUI(item) {
                 const itemDiv = document.getElementById(item.id);
                 if (!itemDiv) return;
                 const statusEl = itemDiv.querySelector(`#status-${item.id}`);
                 const outputEl = itemDiv.querySelector(`#output-${item.id}`);
                 const copyBtn = itemDiv.querySelector(`#copy-${item.id}`);
-                
+                const regenerateBtn = itemDiv.querySelector(`#regenerate-${item.id}`);
+                const isApiConfigured = settingsModalInstance.options.dismissible;
+
                 statusEl.textContent = item.status;
-                statusEl.className = 'queue-item-status'; // Reset classes
+                statusEl.className = 'queue-item-status';
                 if (item.status === 'Processing') statusEl.classList.add('processing');
                 else if (item.status === 'Completed') statusEl.classList.add('completed');
                 else if (item.status === 'Error') statusEl.classList.add('error');
-                
+
                 if (item.copied && (item.output || item.error)) {
                     copyBtn.classList.add('copied'); copyBtn.querySelector('i').textContent = 'check';
                     const tt = M.Tooltip.getInstance(copyBtn); if (tt) { tt.destroy(); copyBtn.setAttribute('data-tooltip', 'Copied!'); M.Tooltip.init(copyBtn); }
                 } else {
                     copyBtn.classList.remove('copied'); copyBtn.querySelector('i').textContent = 'content_copy';
-                     const tt = M.Tooltip.getInstance(copyBtn); if (tt) { tt.destroy(); copyBtn.setAttribute('data-tooltip', 'Copy Output'); M.Tooltip.init(copyBtn); }
+                    const tt = M.Tooltip.getInstance(copyBtn); if (tt) { tt.destroy(); copyBtn.setAttribute('data-tooltip', 'Copy Output'); M.Tooltip.init(copyBtn); }
                 }
 
                 if (item.output || item.error) {
                     outputEl.textContent = item.output || `Error: ${item.error}`;
                     outputEl.style.display = 'block';
-                    outputEl.style.color = item.error ? 'var(--error-color)' : ''; // Use CSS var for error text
+                    outputEl.style.color = item.error ? 'var(--console-error-text)' : '';
                     copyBtn.style.display = 'inline-flex';
                 } else {
-                    outputEl.style.display = 'none'; 
+                    outputEl.style.display = 'none';
                     copyBtn.style.display = 'none';
+                }
+
+                if (item.status === 'Completed' || item.status === 'Error') {
+                    regenerateBtn.style.display = 'inline-flex';
+                    const canRegenerate = !isProcessing && !isSingleItemProcessing && isApiConfigured; // Check new flag
+                    regenerateBtn.disabled = !canRegenerate;
+
+                    let tooltipText;
+                    const currentGlobalPromptType = promptForm.elements['promptType'].value;
+                    const promptTypeFriendlyName = currentGlobalPromptType === 'sd' ? "Stable Diffusion Prompt" : "Danbooru Tags";
+
+                    if (isProcessing) {
+                        tooltipText = "Cannot regenerate: Main queue is processing";
+                    } else if (isSingleItemProcessing) {
+                        tooltipText = "Cannot regenerate: Another item is processing";
+                    } else if (!isApiConfigured) {
+                        tooltipText = "Cannot regenerate: API not configured";
+                    } else {
+                        tooltipText = `Regenerate for: ${promptTypeFriendlyName}`;
+                        if (item.promptTypeUsed && item.promptTypeUsed !== currentGlobalPromptType) {
+                             tooltipText += ` (Original was: ${item.promptTypeUsed === 'sd' ? "Stable Diffusion Prompt" : "Danbooru Tags"})`;
+                        }
+                    }
+
+                    const regenTooltipInstance = M.Tooltip.getInstance(regenerateBtn);
+                    if (regenTooltipInstance) { regenTooltipInstance.destroy(); }
+                    regenerateBtn.setAttribute('data-tooltip', tooltipText);
+                    M.Tooltip.init(regenerateBtn);
+
+                } else {
+                    regenerateBtn.style.display = 'none';
                 }
             }
             
@@ -1473,16 +1661,18 @@
                     console.error("queueCountSidenavSpan not found!"); // Log error if it's missing
                 }
                 
-                processQueueButton.disabled = !isApiReady || isProcessing || pendingItemsCount === 0;
-                clearQueueButton.disabled = isProcessing || imageQueue.length === 0;
+                processQueueButton.disabled = !isApiReady || isProcessing || isSingleItemProcessing || pendingItemsCount === 0;
+                clearQueueButton.disabled = isProcessing || isSingleItemProcessing || imageQueue.length === 0;
 
                 if (!isApiReady) {
                     processQueueButton.innerHTML = 'Configure API <i class="material-icons right">settings</i>';
-                } else if (isProcessing) { 
+                } else if (isProcessing) {
                     // Text is set in the processing loop
-                } else if (pendingItemsCount === 0 && imageQueue.length > 0) { 
+                } else if (isSingleItemProcessing) {
+                    processQueueButton.innerHTML = 'Item Regenerating... <i class="material-icons right spin">autorenew</i>';
+                } else if (pendingItemsCount === 0 && imageQueue.length > 0) {
                     processQueueButton.innerHTML = 'All Processed <i class="material-icons right">done_all</i>';
-                } else { 
+                } else {
                     processQueueButton.innerHTML = `Process Queue ${imageQueue.length > 0 ? '('+pendingItemsCount+')' : ''} <i class="material-icons right">playlist_play</i>`;
                 }
                 
@@ -1494,27 +1684,20 @@
 
                 // --- Export Buttons Logic ---
                 const completedItemsCount = imageQueue.filter(item => item.status === 'Completed' && item.output && item.output.trim() !== '').length;
-                const shouldBeDisabled = completedItemsCount === 0 || isProcessing;
+                const shouldBeDisabled = completedItemsCount === 0 || isProcessing || isSingleItemProcessing;
 
                 // Helper to manage button state and tooltip
                 function configureButton(button, isDisabled, enabledTooltipText, disabledTooltipText) {
-                    if (!button) return; // Safety check
+                    if (!button) return; 
 
                     const newTooltipText = isDisabled ? disabledTooltipText : enabledTooltipText;
-
-                    // 1. Destroy existing tooltip instance, if any
                     const existingTooltipInstance = M.Tooltip.getInstance(button);
                     if (existingTooltipInstance) {
                         existingTooltipInstance.destroy();
                     }
-
-                    // 2. Set the new data-tooltip attribute
                     button.setAttribute('data-tooltip', newTooltipText);
-
-                    // 3. Re-initialize the tooltip on the button
                     M.Tooltip.init(button);
 
-                    // 4. Set disabled state
                     if (isDisabled) {
                         button.classList.add('disabled');
                         button.setAttribute('disabled', '');
@@ -1526,7 +1709,6 @@
                     }
                 }
 
-                // For Copy Button
                 configureButton(
                     copyAllOutputsButton,
                     shouldBeDisabled,
@@ -1534,7 +1716,6 @@
                     "Nothing to copy or processing"
                 );
 
-                // For Download Button
                 configureButton(
                     downloadAllOutputsButton,
                     shouldBeDisabled,
@@ -1681,8 +1862,9 @@
             });
 
             processQueueButton.addEventListener('click', async function() { 
-                if (isProcessing || !settingsModalInstance.options.dismissible) {
+                if (isProcessing || isSingleItemProcessing || !settingsModalInstance.options.dismissible) {
                     if (!settingsModalInstance.options.dismissible) logToConsole("API not configured. Please set it in Settings.", "warning");
+                    else if (isSingleItemProcessing) logToConsole("Cannot start queue: An item is currently being individually regenerated.", "warning");
                     return;
                 }
                 const toProcess = imageQueue.filter(it => it.status === 'Pending');
@@ -1738,12 +1920,17 @@
                         logToConsole(`Error processing "${item.displayTitle}": ${e.message.substring(0,150)}`, 'error', (performance.now() - itemStartTime) / 1000);
                         overallSuccess = false;
                     }
+
+                    item.promptTypeUsed = currentPromptType;
                     updateQueueItemUI(item);
+                    
                     if (i < toProcess.length - 1) await new Promise(res => setTimeout(res, 100));
                 }
 
                 isProcessing = false;
                 updateQueueControls();
+                imageQueue.forEach(it => updateQueueItemUI(it));
+
                 if (toProcess.length > 0) {
                      logToConsole(`Queue processing finished! ${processedCount}/${toProcess.length} processed. ${overallSuccess ? '' : 'Some errors.'}`, overallSuccess ? 'success' : 'warning', (performance.now() - totalQueueStartTime) / 1000);
                 }
@@ -1801,22 +1988,20 @@
                 return outputs.join(delimiter);
             }
 
-            function formatOutputsJson(detailedItems) { // Expects an array of objects: [{output, displayTitle, id (optional)}, ...]
+            function formatOutputsJson(detailedItems) { 
                 if (!detailedItems || detailedItems.length === 0) {
-                    // Attempt to render the schema with empty placeholders
                     let emptySchema = currentJsonSchema;
-                    emptySchema = emptySchema.replace(/"?\{\{outputs_map_indexed\}\}"?/g, ''); // Empty content for maps
-                    emptySchema = emptySchema.replace(/"?\{\{outputs_map_titled\}\}"?/g, '');   // Empty content for maps
-                    emptySchema = emptySchema.replace(/"?\{\{outputs_array_detailed\}\}"?/g, ''); // Empty content for arrays
+                    const currentGlobalPromptTypeForEmpty = promptForm.elements['promptType'].value;
+                    emptySchema = emptySchema.replace(/"?\{\{prompt_type\}\}"?/g, JSON.stringify(currentGlobalPromptTypeForEmpty));
+                    emptySchema = emptySchema.replace(/"?\{\{outputs_map_indexed\}\}"?/g, ''); 
+                    emptySchema = emptySchema.replace(/"?\{\{outputs_map_titled\}\}"?/g, '');  
+                    emptySchema = emptySchema.replace(/"?\{\{outputs_array_detailed\}\}"?/g, ''); 
                     emptySchema = emptySchema.replace(/"?\{\{timestamp\}\}"?/g, `"${new Date().toISOString()}"`);
 
-                    // Clean up potential trailing/leading commas if placeholders were structural
-                    emptySchema = emptySchema.replace(/,\s*([}\]])/g, '$1'); // Remove comma before closing bracket/brace
-                    emptySchema = emptySchema.replace(/([{\[])\s*,/g, '$1'); // Remove comma after opening bracket/brace
-
+                    emptySchema = emptySchema.replace(/,\s*([}\]])/g, '$1'); 
+                    emptySchema = emptySchema.replace(/([{\[])\s*,/g, '$1'); 
 
                     try {
-                        // Attempt to parse to ensure it's valid JSON, then re-stringify prettily
                         return JSON.stringify(JSON.parse(emptySchema), null, 2);
                     } catch (e) {
                         logToConsole(`Error parsing user JSON schema (even with empty data): ${e.message.substring(0,100)}. Schema: ${emptySchema.substring(0,100)}`, 'error');
@@ -1825,21 +2010,18 @@
                 }
 
                 let schemaToProcess = currentJsonSchema;
+                const currentGlobalPromptType = promptForm.elements['promptType'].value;
 
-                // 1. Prepare `{{outputs_map_indexed}}` replacement
-                //    e.g., "1": "output1", "2": "output2"
                 if (schemaToProcess.includes('{{outputs_map_indexed}}')) {
                     const mapIndexedItems = detailedItems.map((item, index) => {
-                        const key = JSON.stringify(String(index + 1)); // Ensures key is a JSON string: "1"
-                        const value = JSON.stringify(String(item.output));   // Ensures value is a JSON string: "output text"
+                        const key = JSON.stringify(String(index + 1)); 
+                        const value = JSON.stringify(String(item.output));   
                         return `${key}: ${value}`;
                     });
-                    const mapIndexedString = mapIndexedItems.join(',\n            '); // Indent for prettiness
+                    const mapIndexedString = mapIndexedItems.join(',\n            '); 
                     schemaToProcess = schemaToProcess.replace(/"?\{\{outputs_map_indexed\}\}"?/g, mapIndexedString);
                 }
 
-                // 2. Prepare `{{outputs_map_titled}}` replacement
-                //    e.g., "CoolImage": "output1", "AnotherOne": "output2"
                 if (schemaToProcess.includes('{{outputs_map_titled}}')) {
                     const mapTitledItems = detailedItems.map(item => {
                         const key = JSON.stringify(String(item.displayTitle));
@@ -1850,42 +2032,37 @@
                     schemaToProcess = schemaToProcess.replace(/"?\{\{outputs_map_titled\}\}"?/g, mapTitledString);
                 }
 
-                // 3. Prepare `{{outputs_array_detailed}}` replacement
-                //    e.g., {"index":1, "output":"out1", "displayTitle":"Title1"}, {"index":2, ...}
                 if (schemaToProcess.includes('{{outputs_array_detailed}}')) {
                     const arrayDetailedItems = detailedItems.map((item, index) => {
                         const detail = {
                             index: index + 1,
                             output: String(item.output),
-                            displayTitle: String(item.displayTitle)
-                            // you could add item.id here too if useful: id: item.id
+                            displayTitle: String(item.displayTitle),
+                            promptTypeUsed: item.promptTypeUsed || currentGlobalPromptType // Add promptTypeUsed to detailed item
                         };
-                        return JSON.stringify(detail); // Stringify each object
+                        return JSON.stringify(detail); 
                     });
                     const arrayDetailedString = arrayDetailedItems.join(',\n            ');
                     schemaToProcess = schemaToProcess.replace(/"?\{\{outputs_array_detailed\}\}"?/g, arrayDetailedString);
                 }
                 
-                // 4. Replace `{{timestamp}}`
                 schemaToProcess = schemaToProcess.replace(/"?\{\{timestamp\}\}"?/g, `"${new Date().toISOString()}"`);
-
-                // Clean up potential trailing/leading commas if placeholders left them (e.g. if a placeholder was the only item)
-                // This is a bit naive and might need refinement based on how users construct schemas.
-                schemaToProcess = schemaToProcess.replace(/,\s*([}\]])/g, '$1'); // Remove comma before closing bracket/brace
-                schemaToProcess = schemaToProcess.replace(/([{\[])\s*,/g, '$1'); // Remove comma after opening bracket/brace
+                schemaToProcess = schemaToProcess.replace(/"?\{\{prompt_type\}\}"?/g, JSON.stringify(currentGlobalPromptType));
 
 
-                // Attempt to parse the final string as JSON and then re-stringify for pretty printing & validation
+                schemaToProcess = schemaToProcess.replace(/,\s*([}\]])/g, '$1'); 
+                schemaToProcess = schemaToProcess.replace(/([{\[])\s*,/g, '$1'); 
+
                 try {
                     const finalJson = JSON.parse(schemaToProcess);
                     return JSON.stringify(finalJson, null, 2);
                 } catch (e) {
                     logToConsole(`Error parsing user-defined JSON schema after replacements: ${e.message.substring(0,150)}. Schema was: ${schemaToProcess.substring(0, 250)}...`, 'error');
-                    // Fallback to a simple array of outputs if user schema fails catastrophically
                     const fallbackArray = detailedItems.map((item, index) => ({
                         index: index + 1,
                         output: item.output,
                         displayTitle: item.displayTitle,
+                        promptTypeUsed: item.promptTypeUsed || currentGlobalPromptType,
                         error_details: "User-defined JSON schema failed to parse. See console log for attempted schema."
                     }));
                     return JSON.stringify(fallbackArray, null, 2);
@@ -1941,16 +2118,20 @@
 
                 const date = new Date();
                 const timestamp = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2,'0')}${date.getDate().toString().padStart(2,'0')}_${date.getHours().toString().padStart(2,'0')}${date.getMinutes().toString().padStart(2,'0')}${date.getSeconds().toString().padStart(2,'0')}`;
+                
+                const currentGlobalPromptType = promptForm.elements['promptType'].value;
+                const formattedPromptType = currentGlobalPromptType.replace(/[^a-z0-9_.-]/gi, '_').toLowerCase();
+
 
                 if (format === 'raw') {
                     const rawOutputsOnly = exportableItems.map(item => item.output);
                     fileContent = formatOutputsRaw(rawOutputsOnly);
-                    fileName = `BiCaption_exports_${timestamp}.txt`;
+                    fileName = `BiCaption_exports_${formattedPromptType}_${timestamp}.txt`;
                     mimeType = 'text/plain;charset=utf-8';
                     typeForLog = "RAW text";
                 } else if (format === 'json') {
                     fileContent = formatOutputsJson(exportableItems);
-                    fileName = `BiCaption_exports_${timestamp}.json`;
+                    fileName = `BiCaption_exports_${formattedPromptType}_${timestamp}.json`;
                     mimeType = 'application/json;charset=utf-8';
                     typeForLog = "JSON";
                 } else {
@@ -1964,13 +2145,12 @@
                     const a = document.createElement('a');
                     a.href = url;
                     a.download = fileName;
-                    document.body.appendChild(a); // Required for Firefox
+                    document.body.appendChild(a); 
                     a.click();
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     logToConsole(`${exportableItems.length} prompt(s) downloaded as ${typeForLog} to ${fileName}.`, 'success');
                 } else {
-                    // This case should ideally not be hit if outputs.length > 0
                     logToConsole(`No content generated for ${typeForLog} download.`, 'warning');
                     M.toast({html: 'Nothing to download!'});
                 }
